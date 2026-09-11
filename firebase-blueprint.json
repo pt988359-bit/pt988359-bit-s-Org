@@ -1,0 +1,82 @@
+{
+  "entities": {
+    "products": {
+      "title": "Products",
+      "description": "Appliance showroom products inventory",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "brand": { "type": "string" },
+        "category": { "type": "string" },
+        "price": { "type": "number" },
+        "originalPrice": { "type": "number" },
+        "status": { "type": "string" },
+        "condition": { "type": "string" },
+        "description": { "type": "string" },
+        "images": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "name", "price", "status"]
+    },
+    "customers": {
+      "title": "Customers",
+      "description": "Showroom customer profiles",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "address": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "name", "phone"]
+    },
+    "reservations": {
+      "title": "Reservations",
+      "description": "Customer appliance reservations and deposit tracking",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "productId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "depositAmount": { "type": "number" },
+        "status": { "type": "string" },
+        "expiresAt": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "productId", "customerPhone", "status"]
+    },
+    "orders": {
+      "title": "Orders",
+      "description": "Sales orders and delivery statuses",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "customerId": { "type": "string" },
+        "productId": { "type": "string" },
+        "totalAmount": { "type": "number" },
+        "paidAmount": { "type": "number" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "productId", "totalAmount", "status"]
+    },
+    "reviews": {
+      "title": "Reviews",
+      "description": "Customer reviews and testimonials",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "customerName": { "type": "string" },
+        "rating": { "type": "number" },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "approved": { "type": "boolean" }
+      },
+      "required": ["customerName", "rating", "comment", "approved"]
+    }
+  }
+}

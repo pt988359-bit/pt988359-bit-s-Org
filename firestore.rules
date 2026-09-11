@@ -1,0 +1,257 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default Deny Everything First
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global Core Primitive Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn() && (
+        request.auth.token.email_verified == true ||
+        request.auth.providerData[0].providerId == 'google.com'
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (request.auth.token.email != null && request.auth.token.email.matches('.*@proteck\\.com$') && isEmailVerified())
+      );
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Validation Schemas
+    function isValidProduct(data) {
+      return data.title is string && data.title.size() >= 2 && data.title.size() <= 200
+        && data.price is number && data.price >= 0
+        && (data.category is string ? data.category.size() <= 100 : true)
+        && (data.images is list ? data.images.size() <= 15 : true);
+    }
+
+    function isValidReservation(data) {
+      return data.productId is string && isValidId(data.productId)
+        && data.customerName is string && data.customerName.size() >= 2 && data.customerName.size() <= 100
+        && data.customerPhone is string && data.customerPhone.size() >= 8 && data.customerPhone.size() <= 20
+        && data.status is string && (data.status in ['active', 'expired', 'cancelled', 'completed', 'converted']);
+    }
+
+    function isValidOrder(data) {
+      return data.productId is string && isValidId(data.productId)
+        && data.customerName is string && data.customerName.size() >= 2 && data.customerName.size() <= 100
+        && data.customerPhone is string && data.customerPhone.size() >= 8 && data.customerPhone.size() <= 20
+        && data.totalAmount is number && data.totalAmount >= 0;
+    }
+
+    function isValidCustomer(data) {
+      return data.name is string && data.name.size() >= 2 && data.name.size() <= 100
+        && data.phone is string && data.phone.size() >= 8 && data.phone.size() <= 20;
+    }
+
+    // 1. PRODUCTS COLLECTION
+    match /products/{productId} {
+      allow read: if true;
+      allow create, update, delete: if true;
+    }
+
+    // 2. CATEGORIES & BRANDS
+    match /categories/{categoryId} {
+      allow read, write: if true;
+    }
+
+    match /brands/{brandId} {
+      allow read, write: if true;
+    }
+
+    // 3. CUSTOMERS & USERS COLLECTION
+    match /customers/{customerId} {
+      allow read: if isOwner(customerId) || isAdmin();
+
+      allow create: if isAdmin() || (
+        isOwner(customerId) &&
+        (incoming().id == customerId || incoming().firebaseUid == customerId) &&
+        (!('totalPurchases' in incoming()) || incoming().totalPurchases == 0) &&
+        (!('totalSpent' in incoming()) || incoming().totalSpent == 0) &&
+        (!('totalReservations' in incoming()) || incoming().totalReservations == 0) &&
+        (!('totalRequests' in incoming()) || incoming().totalRequests == 0) &&
+        (!('isArchived' in incoming()) || incoming().isArchived == false)
+      );
+
+      allow update: if isAdmin() || (
+        isOwner(customerId) &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'totalPurchases',
+          'totalSpent',
+          'totalReservations',
+          'totalRequests',
+          'status',
+          'tags',
+          'notes',
+          'communicationLogs',
+          'documents',
+          'isArchived',
+          'id',
+          'firebaseUid',
+          'firstContactDate'
+        ])
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+    }
+
+    // 4. RESERVATIONS COLLECTION
+    match /reservations/{reservationId} {
+      allow read, write: if true;
+    }
+
+    // 5. ORDERS & COMPLETED SALES COLLECTION
+    match /orders/{orderId} {
+      allow read, write: if true;
+    }
+
+    match /completed_sales/{saleId} {
+      allow read, write: if true;
+    }
+
+    // 6. EXCHANGE, SELL & PURCHASE REQUESTS & NEGOTIATIONS & INQUIRIES
+    match /exchange_requests/{requestId} {
+      allow read, write: if true;
+    }
+
+    match /sell_requests/{requestId} {
+      allow read, write: if true;
+    }
+
+    match /purchase_requests/{requestId} {
+      allow read, write: if true;
+    }
+
+    match /negotiations/{negotiationId} {
+      allow read, write: if true;
+    }
+
+    match /inquiries/{inquiryId} {
+      allow read, write: if true;
+    }
+
+    // 7. ADMIN SHOWROOM BACKOFFICE COLLECTIONS
+    match /suppliers/{supplierId} {
+      allow read, write: if true;
+    }
+
+    match /expenses/{expenseId} {
+      allow read, write: if true;
+    }
+
+    match /finance/{financeId} {
+      allow read, write: if true;
+    }
+
+    match /cost_sheets/{sheetId} {
+      allow read, write: if true;
+    }
+
+    match /invoices/{invoiceId} {
+      allow read, write: if true;
+    }
+
+    match /cash_ledgers/{ledgerId} {
+      allow read, write: if true;
+    }
+
+    match /audit_logs/{logId} {
+      allow read, create: if true;
+      allow update, delete: if false; // Audit logs remain immutable once created
+    }
+
+    match /showroom_settings/{settingId} {
+      allow read, write: if true;
+    }
+
+    match /documents/{docId} {
+      allow read, write: if true;
+    }
+
+    match /admins/{adminId} {
+      allow read, write: if true;
+    }
+
+    match /inventory/{inventoryId} {
+      allow read, write: if true;
+    }
+
+    match /reports/{reportId} {
+      allow read, write: if true;
+    }
+
+    match /analytics/{analyticsId} {
+      allow read, write: if true;
+    }
+
+    // 8. PORTAL & AUTH SESSION COLLECTIONS
+    match /portal_tracking/{trackId} {
+      allow read, write: if true;
+    }
+
+    match /portal_sessions/{sessionId} {
+      allow read, write: if true;
+    }
+
+    match /portal_support/{supportId} {
+      allow read, write: if true;
+    }
+
+    match /auth_sessions/{sessionId} {
+      allow read, write: if true;
+    }
+
+    match /auth_attempts/{attemptId} {
+      allow read, write: if true;
+    }
+
+    match /auth_logs/{logId} {
+      allow read, create: if true;
+      allow update, delete: if false;
+    }
+
+    match /notifications/{notificationId} {
+      allow read, write: if true;
+    }
+
+    // REVIEWS COLLECTION
+    match /reviews/{reviewId} {
+      allow read, write: if true;
+    }
+
+    // AI KNOWLEDGE COLLECTION
+    match /ai_knowledge/{docId} {
+      allow read, write: if true;
+    }
+  }
+}

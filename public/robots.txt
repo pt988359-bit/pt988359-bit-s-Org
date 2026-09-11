@@ -1,0 +1,7 @@
+User-agent: *
+Disallow: /admin
+Disallow: /admin/*
+Disallow: /portal
+Allow: /
+
+Sitemap: https://proteck-egypt.com/sitemap.xml

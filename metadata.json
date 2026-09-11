@@ -1,0 +1,6 @@
+{
+  "name": "PRO TECK",
+  "description": "المعرض الإلكتروني الاحترافي المتخصص في بيع الأجهزة المنزلية الجديدة والمستعملة بالقاهرة - المعادي",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,32 @@
+/**
+ * Enterprise Architecture - Magic Numbers Elimination & Domain Constants
+ * Phase 14.5 Refactoring
+ */
+
+export const MAGIC_NUMBERS = {
+  // Financial & Cash Balances
+  DEFAULT_OPENING_CASH_BALANCE: 48500,
+  INITIAL_SAFETY_CASH_BUFFER: 40000,
+  HIGH_EXPENSE_THRESHOLD: 15000,
+  LARGE_REPAIR_EXPENSE_THRESHOLD: 1500,
+  
+  // Profitability & Margins
+  MIN_ACCEPTABLE_PROFIT_MARGIN_PERCENT: 15,
+  TARGET_PROFIT_MARGIN_PERCENT: 22,
+  MAX_NEGOTIATION_DISCOUNT_PERCENT: 12,
+  REPAIR_COST_ALERT_PERCENT_OF_PURCHASE: 10,
+  
+  // Reservations
+  FREE_RESERVATION_HOURS: 24,
+  
+  // Inspection
+  INSPECTION_TESTING_HOURS: 48,
+  
+  // ID Generation Padding
+  ID_PADDING_LENGTH: 6,
+  REFERENCE_PADDING_LENGTH: 4,
+  
+  // Timeouts & Debounce
+  DEBOUNCE_DELAY_MS: 300,
+  STORAGE_SYNC_INTERVAL_MS: 5000,
+} as const;
