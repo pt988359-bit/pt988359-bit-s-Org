@@ -57,15 +57,15 @@ export class IntentRecognitionEngine {
         return {
           rawQuery: cleanQuery,
           intent: 'NAVIGATE',
-          intentArabicLabel: 'الانتقال لصفحة الحجوزات المباشرة',
+          intentArabicLabel: 'الانتقال لصفحة الطلبات والحجوزات',
           confidence: 98,
-          parameters: [{ name: 'route', value: 'admin-reservations', labelArabic: 'الوجهة: الحجوزات' }],
-          targetEntity: 'admin-reservations',
+          parameters: [{ name: 'route', value: 'admin-orders', labelArabic: 'الوجهة: الطلبات والحجوزات' }],
+          targetEntity: 'admin-orders',
           requiredRole: 'showroom_manager',
           isHighRisk: false,
           requiresConfirmation: false,
           isLocalExecution: true,
-          explanation: 'الانتقال إلى شاشة متابعة الحجوزات وتأكيد الطلبات.',
+          explanation: 'الانتقال إلى شاشة متابعة الطلبات وتأكيد الحجوزات.',
         };
       }
 

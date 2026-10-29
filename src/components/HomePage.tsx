@@ -11,6 +11,7 @@ import { WhyChooseUs } from './home/WhyChooseUs';
 import { BuyingProcessTimeline } from './home/BuyingProcessTimeline';
 import { RecentlySold } from './home/RecentlySold';
 import { SellDeviceCta } from './home/SellDeviceCta';
+import { MaintenanceServiceCta } from './home/MaintenanceServiceCta';
 import { VisitShowroom } from './home/VisitShowroom';
 import { Testimonials } from './home/Testimonials';
 import { FaqAccordion } from './home/FaqAccordion';
@@ -57,7 +58,7 @@ export const HomePage: React.FC = () => {
           </h1>
 
           <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg leading-relaxed">
-            معرض احترافي يجمع بين جودة الأجهزة الجديدة واقتصادية الأجهزة المستعملة المضمونة بحالة الفابريقة. تفضل بزيارتنا في شارع 68 المعادي أو احجز أونلاين.
+            معرض احترافي يجمع بين جودة الأجهزة الجديدة واقتصادية الأجهزة المستعملة المضمونة بحالة الفابريقة. تفضل بزيارتنا في شارع 68 المعادي أو اطلب أونلاين.
           </p>
 
           <div className="flex flex-wrap gap-4 pt-2">
@@ -118,7 +119,10 @@ export const HomePage: React.FC = () => {
       {/* 8) Sell Your Device */}
       <SellDeviceCta />
 
-      {/* 9) Visit Our Showroom */}
+      {/* 9) Maintenance & Repair Services */}
+      <MaintenanceServiceCta />
+
+      {/* 10) Visit Our Showroom */}
       <VisitShowroom />
 
       {/* 11) Testimonials */}

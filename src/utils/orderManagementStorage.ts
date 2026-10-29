@@ -7,7 +7,14 @@ import {
   OrderAuditLogEntry,
   ProductSyncPayload,
 } from '../types/orderManagementCenter';
-import { defaultStorageAdapter } from '../core/storage/LocalStorageAdapter';
+import { firestoreStorageAdapter } from '../core/storage/FirestoreStorageAdapter';
+import {
+  defaultPurchaseRequestRepository,
+  defaultReservationRepository,
+  defaultNegotiationRepository,
+  defaultInquiryRepository,
+  defaultCompletedSaleRepository,
+} from '../core/repositories/OrderRepository';
 
 const STORAGE_KEYS = {
   PURCHASE_REQUESTS: 'proteck_purchase_requests_v1',
@@ -29,7 +36,9 @@ const INITIAL_AUDIT_LOGS: OrderAuditLogEntry[] = [];
 // DATA LOADERS & SAVERS
 export function getPurchaseRequests(): PurchaseRequest[] {
   try {
-    const data = defaultStorageAdapter.getItem<PurchaseRequest[]>(STORAGE_KEYS.PURCHASE_REQUESTS);
+    const repoItems = defaultPurchaseRequestRepository.getAll();
+    if (repoItems && repoItems.length > 0) return repoItems;
+    const data = firestoreStorageAdapter.getItem<PurchaseRequest[]>(STORAGE_KEYS.PURCHASE_REQUESTS);
     return data ? data : INITIAL_PURCHASE_REQUESTS;
   } catch {
     return INITIAL_PURCHASE_REQUESTS;
@@ -37,12 +46,15 @@ export function getPurchaseRequests(): PurchaseRequest[] {
 }
 
 export function savePurchaseRequests(requests: PurchaseRequest[]): void {
-  defaultStorageAdapter.setItem(STORAGE_KEYS.PURCHASE_REQUESTS, requests);
+  firestoreStorageAdapter.setItem(STORAGE_KEYS.PURCHASE_REQUESTS, requests);
+  defaultPurchaseRequestRepository.saveAll(requests);
 }
 
 export function getReservations(): ReservationItem[] {
   try {
-    const data = defaultStorageAdapter.getItem<ReservationItem[]>(STORAGE_KEYS.RESERVATIONS);
+    const repoItems = defaultReservationRepository.getAll();
+    if (repoItems && repoItems.length > 0) return repoItems;
+    const data = firestoreStorageAdapter.getItem<ReservationItem[]>(STORAGE_KEYS.RESERVATIONS);
     return data ? data : INITIAL_RESERVATIONS;
   } catch {
     return INITIAL_RESERVATIONS;
@@ -50,12 +62,15 @@ export function getReservations(): ReservationItem[] {
 }
 
 export function saveReservations(reservations: ReservationItem[]): void {
-  defaultStorageAdapter.setItem(STORAGE_KEYS.RESERVATIONS, reservations);
+  firestoreStorageAdapter.setItem(STORAGE_KEYS.RESERVATIONS, reservations);
+  defaultReservationRepository.saveAll(reservations);
 }
 
 export function getNegotiations(): NegotiationItem[] {
   try {
-    const data = defaultStorageAdapter.getItem<NegotiationItem[]>(STORAGE_KEYS.NEGOTIATIONS);
+    const repoItems = defaultNegotiationRepository.getAll();
+    if (repoItems && repoItems.length > 0) return repoItems;
+    const data = firestoreStorageAdapter.getItem<NegotiationItem[]>(STORAGE_KEYS.NEGOTIATIONS);
     return data ? data : INITIAL_NEGOTIATIONS;
   } catch {
     return INITIAL_NEGOTIATIONS;
@@ -63,12 +78,15 @@ export function getNegotiations(): NegotiationItem[] {
 }
 
 export function saveNegotiations(items: NegotiationItem[]): void {
-  defaultStorageAdapter.setItem(STORAGE_KEYS.NEGOTIATIONS, items);
+  firestoreStorageAdapter.setItem(STORAGE_KEYS.NEGOTIATIONS, items);
+  defaultNegotiationRepository.saveAll(items);
 }
 
 export function getInquiries(): InquiryItem[] {
   try {
-    const data = defaultStorageAdapter.getItem<InquiryItem[]>(STORAGE_KEYS.INQUIRIES);
+    const repoItems = defaultInquiryRepository.getAll();
+    if (repoItems && repoItems.length > 0) return repoItems;
+    const data = firestoreStorageAdapter.getItem<InquiryItem[]>(STORAGE_KEYS.INQUIRIES);
     return data ? data : INITIAL_INQUIRIES;
   } catch {
     return INITIAL_INQUIRIES;
@@ -76,12 +94,15 @@ export function getInquiries(): InquiryItem[] {
 }
 
 export function saveInquiries(items: InquiryItem[]): void {
-  defaultStorageAdapter.setItem(STORAGE_KEYS.INQUIRIES, items);
+  firestoreStorageAdapter.setItem(STORAGE_KEYS.INQUIRIES, items);
+  defaultInquiryRepository.saveAll(items);
 }
 
 export function getCompletedSales(): CompletedSaleItem[] {
   try {
-    const data = defaultStorageAdapter.getItem<CompletedSaleItem[]>(STORAGE_KEYS.COMPLETED_SALES);
+    const repoItems = defaultCompletedSaleRepository.getAll();
+    if (repoItems && repoItems.length > 0) return repoItems;
+    const data = firestoreStorageAdapter.getItem<CompletedSaleItem[]>(STORAGE_KEYS.COMPLETED_SALES);
     return data ? data : INITIAL_COMPLETED_SALES;
   } catch {
     return INITIAL_COMPLETED_SALES;
@@ -89,12 +110,13 @@ export function getCompletedSales(): CompletedSaleItem[] {
 }
 
 export function saveCompletedSales(sales: CompletedSaleItem[]): void {
-  defaultStorageAdapter.setItem(STORAGE_KEYS.COMPLETED_SALES, sales);
+  firestoreStorageAdapter.setItem(STORAGE_KEYS.COMPLETED_SALES, sales);
+  defaultCompletedSaleRepository.saveAll(sales);
 }
 
 export function getAuditLogs(): OrderAuditLogEntry[] {
   try {
-    const data = defaultStorageAdapter.getItem<OrderAuditLogEntry[]>(STORAGE_KEYS.AUDIT_LOGS);
+    const data = firestoreStorageAdapter.getItem<OrderAuditLogEntry[]>(STORAGE_KEYS.AUDIT_LOGS);
     return data ? data : INITIAL_AUDIT_LOGS;
   } catch {
     return INITIAL_AUDIT_LOGS;
@@ -119,7 +141,7 @@ export function logOrderAudit(
   };
   const logs = getAuditLogs();
   const updated = [newEntry, ...logs];
-  defaultStorageAdapter.setItem(STORAGE_KEYS.AUDIT_LOGS, updated);
+  firestoreStorageAdapter.setItem(STORAGE_KEYS.AUDIT_LOGS, updated);
   return newEntry;
 }
 

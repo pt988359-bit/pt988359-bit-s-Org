@@ -31,6 +31,7 @@ export interface UnifiedCustomerRequest {
   productId?: string;
   productTitle?: string;
   productPrice?: number;
+  finalPrice?: number;
   productImage?: string;
   status: RequestStatus;
   priority: 'low' | 'medium' | 'high' | 'urgent';
@@ -45,6 +46,39 @@ export interface UnifiedCustomerRequest {
 export class RequestRepository extends BaseRepository<UnifiedCustomerRequest> {
   constructor() {
     super('customer_requests');
+  }
+
+  private sanitizeRequest(req: UnifiedCustomerRequest): UnifiedCustomerRequest {
+    if (typeof req.productImage === 'string' && req.productImage.startsWith('data:image')) {
+      return {
+        ...req,
+        productImage: '',
+      };
+    }
+    return req;
+  }
+
+  public override getAll(): UnifiedCustomerRequest[] {
+    return super.getAll().map((r) => this.sanitizeRequest(r));
+  }
+
+  public override async fetchLive(): Promise<UnifiedCustomerRequest[]> {
+    const items = await super.fetchLive();
+    return items.map((r) => this.sanitizeRequest(r));
+  }
+
+  public override save(item: UnifiedCustomerRequest): UnifiedCustomerRequest {
+    return super.save(this.sanitizeRequest(item));
+  }
+
+  public override saveAll(items: UnifiedCustomerRequest[]): void {
+    super.saveAll(items.map((r) => this.sanitizeRequest(r)));
+  }
+
+  public override subscribe(callback: (items: UnifiedCustomerRequest[]) => void): () => void {
+    return super.subscribe((items) => {
+      callback(items.map((r) => this.sanitizeRequest(r)));
+    });
   }
 
   public createRequest(request: Omit<UnifiedCustomerRequest, 'id' | 'createdAt'>): UnifiedCustomerRequest {
@@ -83,7 +117,13 @@ export class RequestRepository extends BaseRepository<UnifiedCustomerRequest> {
     });
   }
 
-  public updateStatus(id: string, status: RequestStatus, note?: string, actor = 'Showroom Admin'): UnifiedCustomerRequest | null {
+  public updateStatus(
+    id: string,
+    status: RequestStatus,
+    note?: string,
+    actor = 'Showroom Admin',
+    finalPrice?: number
+  ): UnifiedCustomerRequest | null {
     const statusLabels: Record<string, string> = {
       new: 'جديد',
       viewed: 'تم الاطلاع',
@@ -96,7 +136,15 @@ export class RequestRepository extends BaseRepository<UnifiedCustomerRequest> {
     };
 
     const statusNote = note || `تغيير حالة الطلب إلى: ${statusLabels[status] || status}`;
-    return this.addTimelineEntry(id, statusNote, actor, status);
+    const result = this.addTimelineEntry(id, statusNote, actor, status);
+    if (result && typeof finalPrice === 'number') {
+      return this.update(id, { finalPrice, updatedAt: new Date().toISOString() });
+    }
+    return result;
+  }
+
+  public setFinalPrice(id: string, finalPrice: number): UnifiedCustomerRequest | null {
+    return this.update(id, { finalPrice, updatedAt: new Date().toISOString() });
   }
 
   public bulkUpdateStatus(ids: string[], status: RequestStatus, actor = 'Showroom Admin'): number {

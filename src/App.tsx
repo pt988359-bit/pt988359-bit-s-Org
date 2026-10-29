@@ -17,8 +17,17 @@ const AppRouter: React.FC = () => {
 
   // Check URL path or hash on initial load
   useEffect(() => {
-    const path = window.location.pathname.toLowerCase();
+    const rawPath = window.location.pathname;
+    const path = rawPath.toLowerCase();
     const hash = window.location.hash.toLowerCase();
+
+    // Check if path matches /product-detail/{productId}
+    const productDetailMatch = rawPath.match(/\/product-detail\/([^/?#]+)/i) || window.location.hash.match(/product-detail\/([^/?#]+)/i);
+    if (productDetailMatch && productDetailMatch[1]) {
+      const extractedId = decodeURIComponent(productDetailMatch[1]);
+      navigateTo('product-detail', { productId: extractedId });
+      return;
+    }
 
     if (path.includes('/portal') || hash.includes('portal')) {
       navigateTo('my-activity');

@@ -1,8 +1,7 @@
 import {
   initializeFirestore,
   getFirestore,
-  persistentLocalCache,
-  persistentMultipleTabManager,
+  memoryLocalCache,
   Firestore,
   collection,
   doc,
@@ -30,7 +29,7 @@ import { LoggerService } from '../core/services/LoggerService';
 import { firestoreHealthManager } from './FirestoreHealthManager';
 
 const rawDbId = firebaseConfig.firestoreDatabaseId;
-const dbId = (rawDbId && rawDbId.trim() !== '' && rawDbId !== '(default)') ? rawDbId.trim() : undefined;
+const dbId = (rawDbId && rawDbId.trim() !== '' && rawDbId !== '(default)' && rawDbId !== 'default') ? rawDbId.trim() : undefined;
 
 let firestoreInstance: Firestore;
 try {
@@ -38,13 +37,11 @@ try {
     app,
     {
       experimentalForceLongPolling: true,
-      localCache: persistentLocalCache({
-        tabManager: persistentMultipleTabManager(),
-      }),
+      localCache: memoryLocalCache(),
     },
     dbId
   );
-  LoggerService.info('Firestore', `Firestore initialized with force long-polling & persistent cache (db: ${dbId || 'default'})`);
+  LoggerService.info('Firestore', `Firestore initialized with force long-polling & memory cache (db: ${dbId || 'default'})`);
 } catch (e: any) {
   LoggerService.warn('Firestore', 'initializeFirestore with cache failed or already initialized, falling back to getFirestore:', e?.message || e);
   firestoreInstance = dbId ? getFirestore(app, dbId) : getFirestore(app);
@@ -80,6 +77,7 @@ export async function setDocData<T extends { id: string }>(
   } catch (error) {
     firestoreHealthManager.recordError(error, `setDocData:${collectionName}/${data.id}`);
     LoggerService.warn('Firestore', `setDocData failed for ${collectionName}/${data.id}`, error);
+    throw error;
   }
 }
 
@@ -95,6 +93,7 @@ export async function updateDocData(
   } catch (error) {
     firestoreHealthManager.recordError(error, `updateDocData:${collectionName}/${docId}`);
     LoggerService.warn('Firestore', `updateDocData failed for ${collectionName}/${docId}`, error);
+    throw error;
   }
 }
 
@@ -106,6 +105,7 @@ export async function deleteDocData(collectionName: string, docId: string): Prom
   } catch (error) {
     firestoreHealthManager.recordError(error, `deleteDocData:${collectionName}/${docId}`);
     LoggerService.warn('Firestore', `deleteDocData failed for ${collectionName}/${docId}`, error);
+    throw error;
   }
 }
 
@@ -215,7 +215,7 @@ export function subscribeToCollection<T>(
 
 export async function runFirestoreTransaction<T>(
   updateFunction: (transaction: Transaction) => Promise<T>
-): Promise<T | null> {
+): Promise<T> {
   try {
     const result = await runTransaction(db, updateFunction);
     firestoreHealthManager.recordSuccess();
@@ -223,7 +223,7 @@ export async function runFirestoreTransaction<T>(
   } catch (error) {
     firestoreHealthManager.recordError(error, 'runFirestoreTransaction');
     LoggerService.warn('Firestore', 'Transaction failed', error);
-    return null;
+    throw error;
   }
 }
 
@@ -247,5 +247,6 @@ export async function executeBatchWrite(
   } catch (error) {
     firestoreHealthManager.recordError(error, 'executeBatchWrite');
     LoggerService.warn('Firestore', 'Batch write failed', error);
+    throw error;
   }
 }

@@ -91,9 +91,8 @@ export const BulkActionsModal: React.FC<BulkActionsModalProps> = ({
                 <option value="photography">6. التصوير الفوتوغرافي (Photography)</option>
                 <option value="pending_review">7. المراجعة الفنية (Pending Review)</option>
                 <option value="published">8. منشور بالمعرض والموقع (Published)</option>
-                <option value="reserved">9. محجوز بعربون (Reserved)</option>
-                <option value="sold">10. تم البيع والتسليم (Sold)</option>
-                <option value="archived">11. مؤرشف للسلة (Archived)</option>
+                <option value="sold">9. تم البيع والتسليم (Sold)</option>
+                <option value="archived">10. مؤرشف للسلة (Archived)</option>
               </select>
             </div>
           )}

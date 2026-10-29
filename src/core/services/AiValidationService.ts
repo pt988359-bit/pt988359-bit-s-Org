@@ -76,11 +76,13 @@ export class AiValidationService {
 
     // 2. Condition Validation (Do NOT assume warranty by default)
     const rawCond = rawAiOutput?.condition;
-    let validCond: 'new' | 'new_in_box' | 'used_warranty' | 'used_no_warranty' = 'used_no_warranty';
-    if (rawCond === 'new' || rawCond === 'new_in_box' || rawCond === 'used_warranty' || rawCond === 'used_no_warranty') {
+    let validCond: 'new' | 'used_warranty' | 'used_no_warranty' = 'used_no_warranty';
+    if (rawCond === 'new' || rawCond === 'new_in_box') {
+      validCond = 'new';
+    } else if (rawCond === 'used_warranty' || rawCond === 'used_no_warranty') {
       validCond = rawCond;
     } else if (rawCond?.includes('جديد بالكرتونة') || rawCond?.includes('كرتونة')) {
-      validCond = 'new_in_box';
+      validCond = 'new';
     } else if (rawCond?.includes('جديد')) {
       validCond = 'new';
     } else if (rawCond?.includes('بضمان') || rawCond?.includes('مع ضمان')) {

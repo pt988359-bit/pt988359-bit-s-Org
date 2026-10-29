@@ -10,7 +10,6 @@ import {
   Clock,
   DollarSign,
   ShoppingBag,
-  BookmarkCheck,
   TrendingUp,
   Tag,
   ShieldCheck,
@@ -39,7 +38,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   return (
     <div className="space-y-6 dir-rtl text-xs text-slate-200">
       {/* Top Quick Stats Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between shadow-md">
           <div>
             <p className="text-slate-400 text-[11px]">إجمالي الإنفاق والمبيعات</p>
@@ -59,16 +58,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           </div>
           <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
             <ShoppingBag className="w-5 h-5" />
-          </div>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between shadow-md">
-          <div>
-            <p className="text-slate-400 text-[11px]">الحجوزات المعتمدة</p>
-            <p className="text-lg font-black text-amber-400 mt-1">{customer.totalReservations} حجز</p>
-          </div>
-          <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
-            <BookmarkCheck className="w-5 h-5" />
           </div>
         </div>
 
@@ -174,9 +163,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   العنوان والمنطقة:
                 </span>
                 <p className="font-bold text-slate-200">
-                  {customer.address.cityArea} - {customer.address.governorate}
+                  {customer.address?.cityArea || 'غير محدد'}{customer.address?.governorate ? ` - ${customer.address.governorate}` : ''}
                 </p>
-                {customer.address.streetAddress && (
+                {customer.address?.streetAddress && (
                   <p className="text-[11px] text-slate-400">{customer.address.streetAddress}</p>
                 )}
               </div>

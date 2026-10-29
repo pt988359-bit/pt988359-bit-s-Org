@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { EnrichedProduct } from '../../../../../types/productStudio';
-import { QrCode, Trash2, RotateCcw, Save, ShieldAlert, Barcode, Hash } from 'lucide-react';
+import { QrCode, Trash2, RotateCcw, Save, ShieldAlert, Barcode, Hash, CheckCircle2, DollarSign } from 'lucide-react';
 
 interface SettingsTabProps {
   product: EnrichedProduct;
   onUpdateProduct: (updated: Partial<EnrichedProduct>) => void;
   onSoftDelete: (id: string, name: string) => void;
   onRestore: (id: string, name: string) => void;
+  onMarkAsSold: (finalPrice: number) => void;
 }
 
 export const SettingsTab: React.FC<SettingsTabProps> = ({
@@ -14,9 +15,14 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   onUpdateProduct,
   onSoftDelete,
   onRestore,
+  onMarkAsSold,
 }) => {
   const [codeFormat, setCodeFormat] = useState(product.internalCode || `PT-WM-2026-0001`);
   const [qrCodeVal, setQrCodeVal] = useState(product.qrCode || `QR-${product.id}`);
+  const [salePrice, setSalePrice] = useState<string>(
+    product.price !== undefined && product.price > 0 ? String(product.price) : ''
+  );
+  const [saleSuccessMessage, setSaleSuccessMessage] = useState<string | null>(null);
 
   const handleSaveCode = () => {
     onUpdateProduct({
@@ -24,6 +30,18 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       qrCode: qrCodeVal,
       updatedAt: new Date().toISOString(),
     });
+  };
+
+  const numSalePrice = parseFloat(salePrice);
+  const isSaleButtonDisabled = !salePrice.trim() || isNaN(numSalePrice) || numSalePrice <= 0;
+
+  const handleDirectSale = () => {
+    if (isSaleButtonDisabled) return;
+    onMarkAsSold(numSalePrice);
+    setSaleSuccessMessage(`تم تسجيل بيع الجهاز بنجاح بسعر ${numSalePrice.toLocaleString()} ج.م`);
+    setTimeout(() => {
+      setSaleSuccessMessage(null);
+    }, 4000);
   };
 
   return (
@@ -87,6 +105,79 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Direct Sale Registration Card */}
+      {product.status === 'sold' ? (
+        <div className="p-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 space-y-2">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-sm text-emerald-300">تسجيل بيع مباشر</h3>
+              <p className="text-emerald-200 text-xs font-bold mt-1">
+                تم بيع هذا الجهاز بتاريخ {product.soldAt ? (product.soldAt.includes('T') ? product.soldAt.split('T')[0] : product.soldAt) : 'سابقاً'} بسعر {(product.finalPrice ?? product.price ?? 0).toLocaleString()} ج.م
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+                <DollarSign className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-sm text-white">تسجيل بيع مباشر (بدون طلب أونلاين)</h3>
+                <p className="text-slate-400 text-[11px] mt-0.5">
+                  تسجيل فوري لعمليات البيع الحضوري بالمعرض أو هاتفياً وتحديث حالة الجهاز إلى مباع
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {saleSuccessMessage && (
+            <div className="p-3 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 font-bold flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>{saleSuccessMessage}</span>
+            </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-4">
+            <div className="flex-1 space-y-1">
+              <label className="font-bold text-slate-300 block">
+                السعر الفعلي اللي اتباع بيه الجهاز (ج.م):
+              </label>
+              <input
+                type="number"
+                min="1"
+                step="any"
+                value={salePrice}
+                onChange={(e) => setSalePrice(e.target.value)}
+                placeholder="أدخل السعر الفعلي..."
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono font-bold text-emerald-400 focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            <div>
+              <button
+                type="button"
+                disabled={isSaleButtonDisabled}
+                onClick={handleDirectSale}
+                className={`w-full sm:w-auto px-5 py-2.5 rounded-xl font-extrabold text-white transition-all flex items-center justify-center gap-2 shadow-lg ${
+                  !isSaleButtonDisabled
+                    ? 'bg-emerald-600 hover:bg-emerald-500 cursor-pointer shadow-emerald-600/20'
+                    : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50 shadow-none'
+                }`}
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>تأكيد البيع</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Archiving & Soft Delete Card (PART 7) */}
       <div className="p-5 rounded-2xl bg-rose-500/5 border border-rose-500/20 space-y-4">

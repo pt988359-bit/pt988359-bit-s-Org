@@ -8,9 +8,27 @@
 import { StorageAdapter } from './StorageAdapter';
 import { StorageError } from '../errors/DomainErrors';
 import { LoggerService } from '../services/LoggerService';
+import { ToastDispatcher } from '../services/ToastDispatcher';
+
+export interface LocalStorageAdapterOptions {
+  suppressQuotaToast?: boolean;
+}
 
 export class LocalStorageAdapter implements StorageAdapter {
   private inMemoryFallback: Map<string, string> = new Map();
+  private suppressQuotaToast: boolean = false;
+
+  constructor(options?: LocalStorageAdapterOptions | boolean) {
+    if (typeof options === 'boolean') {
+      this.suppressQuotaToast = options;
+    } else if (options && typeof options.suppressQuotaToast === 'boolean') {
+      this.suppressQuotaToast = options.suppressQuotaToast;
+    }
+  }
+
+  public setSuppressQuotaToast(suppress: boolean): void {
+    this.suppressQuotaToast = suppress;
+  }
 
   private isLocalStorageAvailable(): boolean {
     try {
@@ -43,7 +61,24 @@ export class LocalStorageAdapter implements StorageAdapter {
     try {
       const serialized = JSON.stringify(value);
       if (this.isLocalStorageAvailable()) {
-        window.localStorage.setItem(key, serialized);
+        try {
+          window.localStorage.setItem(key, serialized);
+        } catch (lsWriteError) {
+          // If browser localStorage quota is exceeded or storage is disabled, use fast memory cache
+          LoggerService.warn('LocalStorageAdapter', `localStorage.setItem failed for key "${key}", falling back to in-memory:`, lsWriteError);
+          this.inMemoryFallback.set(key, serialized);
+
+          // Alert admin/user via visible UI toast when falling back to volatile in-memory storage,
+          // only if not suppressed (e.g. suppressed when functioning as Firestore's internal local cache)
+          if (!this.suppressQuotaToast) {
+            ToastDispatcher.dispatch(
+              'تنبيه سعة التخزين المؤقت',
+              `تعذر الحفظ الدائم في ذاكرة المتصفح للمفتاح (${key}) لامتلائها. تم الحفظ مؤقتًا في الذاكرة الحالية للجلسة.`,
+              'warning',
+              6000
+            );
+          }
+        }
       } else {
         this.inMemoryFallback.set(key, serialized);
       }
@@ -84,13 +119,31 @@ export class LocalStorageAdapter implements StorageAdapter {
     this.setItem(collectionName, items);
   }
 
+  public saveItem<T>(collectionName: string, item: T): void {
+    const items = this.getCollection<T>(collectionName);
+    const itemId = item && typeof item === 'object' && 'id' in (item as any) ? (item as any).id : undefined;
+
+    let updated: T[];
+    if (itemId !== undefined) {
+      const index = items.findIndex((existing: any) => existing && typeof existing === 'object' && existing.id === itemId);
+      if (index >= 0) {
+        updated = [...items];
+        updated[index] = item;
+      } else {
+        updated = [item, ...items];
+      }
+    } else {
+      updated = [item, ...items];
+    }
+
+    this.setItem(collectionName, updated);
+  }
+
   public queryCollection<T>(collectionName: string, predicate: (item: T) => boolean): T[] {
     const collection = this.getCollection<T>(collectionName);
     return collection.filter(predicate);
   }
 }
 
-import { firestoreStorageAdapter } from './FirestoreStorageAdapter';
-
-export const defaultStorageAdapter = firestoreStorageAdapter;
+export const defaultStorageAdapter = new LocalStorageAdapter();
 

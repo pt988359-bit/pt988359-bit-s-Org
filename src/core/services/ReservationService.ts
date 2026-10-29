@@ -48,14 +48,14 @@ export class ReservationService {
    * Create a Free Reservation (strictly 24 hours).
    * Automatically sets product status to 'reserved' (hidden from showroom).
    */
-  public static createFreeReservation(payload: {
+  public static async createFreeReservation(payload: {
     productId: string;
     productPrice: number;
     productTitle?: string;
     productImage?: string;
     customerName: string;
     customerPhone: string;
-  }): ReservationInfo {
+  }): Promise<ReservationInfo> {
     // TASK-002 Rule: Limit 1 reservation per customer
     if (this.hasActiveReservation(payload.customerPhone)) {
       throw new Error('لديك حجز نشط بالفعل. يمكن كل عميل حجز جهاز واحد فقط في نفس الوقت.');
@@ -64,7 +64,7 @@ export class ReservationService {
     const hours = 24; // Strictly 24 hours
     const reservedAt = new Date();
     const expiresAt = DateTimeService.addHours(hours, reservedAt);
-    const reservationNumber = defaultSequenceService.generateNextReference('reservation');
+    const reservationNumber = await defaultSequenceService.generateNextReference('reservation');
 
     const reservation: ReservationInfo = {
       id: IdGenerator.generateUniqueId('res'),

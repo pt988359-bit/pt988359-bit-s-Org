@@ -5,8 +5,9 @@
 
 import { BaseRepository } from './BaseRepository';
 import { StorageAdapter } from '../storage/StorageAdapter';
-import { defaultStorageAdapter } from '../storage/LocalStorageAdapter';
+import { firestoreStorageAdapter } from '../storage/FirestoreStorageAdapter';
 import { BUSINESS_CONFIG } from '../../config/businessConfig';
+import { FIRESTORE_COLLECTIONS } from '../config/FirestoreConfig';
 
 export interface BusinessSettingsRecord {
   id: string; // 'showroom_settings'
@@ -25,10 +26,10 @@ export interface BusinessSettingsRecord {
   updatedAt: string;
 }
 
-const SETTINGS_KEY = 'proteck_business_settings_v1';
+const SETTINGS_KEY = FIRESTORE_COLLECTIONS.SHOWROOM_SETTINGS;
 
 export class SettingsRepository extends BaseRepository<BusinessSettingsRecord> {
-  constructor(storage: StorageAdapter = defaultStorageAdapter) {
+  constructor(storage: StorageAdapter = firestoreStorageAdapter) {
     super(SETTINGS_KEY, storage);
   }
 

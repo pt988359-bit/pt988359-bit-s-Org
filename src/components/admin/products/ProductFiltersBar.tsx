@@ -151,9 +151,9 @@ export const ProductFiltersBar: React.FC<ProductFiltersBarProps> = ({
             className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
           >
             <option value="all">كافة الحالات</option>
-            <option value="used">مستعمل فرز أول / زيرو</option>
-            <option value="new">جديد بالكرتونة والضمان</option>
-            <option value="refurbished">مجدد ومفحوص بالمعمل</option>
+            <option value="new">جديد</option>
+            <option value="used_warranty">مستعمل بضمان الشركة</option>
+            <option value="used_no_warranty">مستعمل بدون ضمان</option>
           </select>
         </div>
 
@@ -174,7 +174,6 @@ export const ProductFiltersBar: React.FC<ProductFiltersBarProps> = ({
             <option value="photography">التصوير الفوتوغرافي</option>
             <option value="pending_review">المراجعة والاعتماد</option>
             <option value="published">منشور بالمعرض والموقع</option>
-            <option value="reserved">محجوز بعربون</option>
             <option value="sold">تم البيع والتسليم</option>
             <option value="archived">مؤرشف بالسلة</option>
           </select>
@@ -207,7 +206,6 @@ export const ProductFiltersBar: React.FC<ProductFiltersBarProps> = ({
             <option value="oldest">الأقدم إضافة</option>
             <option value="highest_price">الأعلى سعراً</option>
             <option value="lowest_price">الأقل سعراً</option>
-            <option value="most_viewed">الأكثر مشاهدة</option>
             <option value="recently_updated">الأحدث تحديثاً</option>
             <option value="alphabetical">أبجدياً (أ-ي)</option>
           </select>

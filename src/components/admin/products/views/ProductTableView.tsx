@@ -62,9 +62,7 @@ export const ProductTableView: React.FC<ProductTableViewProps> = ({
               <th className="p-3.5">تكلفة الشراء (داخلي)</th>
               <th className="p-3.5 text-center">تفاوض</th>
               <th className="p-3.5">الضمان</th>
-              <th className="p-3.5 text-center">الحجوزات</th>
               <th className="p-3.5 text-center">الطلبات</th>
-              <th className="p-3.5 text-center">المشاهدات</th>
               <th className="p-3.5 whitespace-nowrap">تاريخ الإضافة</th>
               <th className="p-3.5 whitespace-nowrap">آخر تحديث</th>
               <th className="p-3.5 text-left sticky left-0 bg-slate-950/90 backdrop-blur-sm z-10">إجراءات</th>
@@ -73,7 +71,7 @@ export const ProductTableView: React.FC<ProductTableViewProps> = ({
           <tbody className="divide-y divide-slate-800/60">
             {products.length === 0 ? (
               <tr>
-                <td colSpan={17} className="p-12 text-center text-slate-500 font-bold">
+                <td colSpan={15} className="p-12 text-center text-slate-500 font-bold">
                   لا توجد أجهزة مطابقة لمعايير البحث والفلترة حالياً.
                 </td>
               </tr>
@@ -105,11 +103,24 @@ export const ProductTableView: React.FC<ProductTableViewProps> = ({
                     {/* Thumbnail */}
                     <td className="p-3.5">
                       <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-slate-800 bg-slate-950 shrink-0 group">
-                        <img
-                          src={p.images?.[0] || 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=200&q=80'}
-                          alt={p.title}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform"
-                        />
+                        {p.images?.[0] ? (
+                          <img
+                            src={p.images[0]}
+                            alt={p.title}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                            }}
+                          />
+                        ) : null}
+                        <div
+                          className={`${
+                            p.images?.[0] ? 'hidden ' : ''
+                          }w-full h-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 text-[9px] text-center p-0.5 leading-tight select-none`}
+                        >
+                          لا توجد صورة
+                        </div>
                         <button
                           onClick={() => onOpenWorkspace(p)}
                           className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity cursor-pointer"
@@ -145,7 +156,11 @@ export const ProductTableView: React.FC<ProductTableViewProps> = ({
                     {/* Condition */}
                     <td className="p-3.5 whitespace-nowrap">
                       <span className="px-2 py-0.5 rounded-full font-bold text-[10px] bg-slate-800 text-slate-300 border border-slate-700">
-                        {p.condition === 'new' ? 'جديد بالكرتونة' : p.condition === 'used' ? `مستعمل ${p.conditionRating || 9.5}/10` : 'مجدد'}
+                        {p.condition === 'new'
+                          ? 'جديد بالكرتونة'
+                          : p.condition === 'used_warranty' || p.condition === 'refurbished'
+                          ? `مستعمل بضمان (${p.conditionRating || 9.5}/10)`
+                          : `مستعمل بدون ضمان (${p.conditionRating || 9.5}/10)`}
                       </span>
                     </td>
 
@@ -203,19 +218,9 @@ export const ProductTableView: React.FC<ProductTableViewProps> = ({
                       </span>
                     </td>
 
-                    {/* Reservations count */}
-                    <td className="p-3.5 text-center font-mono font-bold text-amber-400">
-                      {p.reservationsCount || 0}
-                    </td>
-
                     {/* Purchase Requests count */}
                     <td className="p-3.5 text-center font-mono font-bold text-blue-400">
                       {p.purchaseRequestsCount || 0}
-                    </td>
-
-                    {/* Views count */}
-                    <td className="p-3.5 text-center font-mono text-slate-400">
-                      {p.viewsCount || 0}
                     </td>
 
                     {/* Created Date */}

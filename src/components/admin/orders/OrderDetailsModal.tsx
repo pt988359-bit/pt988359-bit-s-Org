@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import {
   PurchaseRequest,
-  ReservationItem,
   NegotiationItem,
   OrderTimelineEvent,
   ProductSyncPayload,
 } from '../../../types/orderManagementCenter';
 
 import { createProductSyncPayload } from '../../../utils/orderManagementStorage';
+import { normalizeEgyptianPhone } from '../../../utils/phoneUtils';
 import {
   X,
   Clock,
@@ -28,11 +28,10 @@ import {
 } from 'lucide-react';
 
 interface OrderDetailsModalProps {
-  item: PurchaseRequest | ReservationItem | any;
-  itemType: 'request' | 'reservation' | 'negotiation' | 'completed';
+  item: PurchaseRequest | any;
+  itemType: 'request' | 'negotiation' | 'completed';
   onClose: () => void;
   onUpdateStatus: (id: string, newStatus: string) => void;
-  onConvertToReservation?: (item: any) => void;
   onConvertToSale?: (item: any) => void;
   onOpenAiAssistant?: (item: any) => void;
 }
@@ -42,7 +41,6 @@ export const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
   itemType,
   onClose,
   onUpdateStatus,
-  onConvertToReservation,
   onConvertToSale,
   onOpenAiAssistant,
 }) => {
@@ -191,7 +189,7 @@ export const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                   <p className="font-black text-white text-xs">{item.customerName}</p>
                   <p className="text-slate-400 font-mono text-[11px]">الهاتف: {item.customerPhone}</p>
                   <a
-                    href={`https://wa.me/${item.customerPhone}`}
+                    href={`https://wa.me/${normalizeEgyptianPhone(item.customerPhone || '')}`}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 hover:underline pt-1"
@@ -240,19 +238,6 @@ export const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                 </h4>
 
                 <div className="flex items-center gap-2 flex-wrap">
-                  {itemType === 'request' && onConvertToReservation && (
-                    <button
-                      onClick={() => {
-                        onConvertToReservation(item);
-                        handleTriggerProductSync('reserved');
-                      }}
-                      className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black flex items-center gap-2 shadow-lg shadow-purple-600/30 cursor-pointer"
-                    >
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>تحويل إلى حجز مؤكد (Reservation)</span>
-                    </button>
-                  )}
-
                   {onConvertToSale && (
                     <button
                       onClick={() => {
@@ -317,17 +302,10 @@ export const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                   <span>محرك مزامنة حالة الجهاز بالنظام والمخزن</span>
                 </h4>
                 <p className="text-slate-300 leading-relaxed">
-                  عند تغيير حالة الطلب أو الحجز، يتم إطلاق حمولة مزامنة فورية لتحديث حالة الجهاز بالمخزن وحساب العميل وإشعارات الإدارة.
+                  عند تغيير حالة الطلب، يتم إطلاق حمولة مزامنة فورية لتحديث حالة الجهاز بالمخزن وحساب العميل وإشعارات الإدارة.
                 </p>
 
                 <div className="flex items-center gap-2 pt-2">
-                  <button
-                    onClick={() => handleTriggerProductSync('reserved')}
-                    className="px-3.5 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 font-bold border border-purple-500/20"
-                  >
-                    مزامنة كـ "محجوز"
-                  </button>
-
                   <button
                     onClick={() => handleTriggerProductSync('sold')}
                     className="px-3.5 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/20"

@@ -6,7 +6,8 @@ import {
   CustomerDocument,
   CustomerActivitySummary,
 } from '../types/customerActions';
-import { defaultStorageAdapter } from '../core/storage/LocalStorageAdapter';
+import { firestoreStorageAdapter } from '../core/storage/FirestoreStorageAdapter';
+import { defaultCustomerActivityRepository } from '../core/repositories/CustomerRepository';
 import { LoggerService } from '../core/services/LoggerService';
 import { IdGenerator } from '../core/services/IdGenerator';
 
@@ -29,7 +30,19 @@ function getInitialActivity(): CustomerActivitySummary {
 
 export function getCustomerActivity(): CustomerActivitySummary {
   try {
-    const parsed = defaultStorageAdapter.getItem<CustomerActivitySummary>(STORAGE_KEY);
+    const repoItem = defaultCustomerActivityRepository.getById('current_activity');
+    if (repoItem) {
+      return {
+        purchaseRequests: repoItem.purchaseRequests || [],
+        reservations: repoItem.reservations || [],
+        negotiations: repoItem.negotiations || [],
+        inquiries: repoItem.inquiries || [],
+        documents: repoItem.documents || [],
+        favorites: getFavorites(),
+        recentlyViewed: getRecentlyViewed(),
+      };
+    }
+    const parsed = firestoreStorageAdapter.getItem<CustomerActivitySummary>(STORAGE_KEY);
     if (!parsed) return getInitialActivity();
     return {
       purchaseRequests: parsed.purchaseRequests || [],
@@ -48,7 +61,8 @@ export function getCustomerActivity(): CustomerActivitySummary {
 
 function saveCustomerActivity(data: CustomerActivitySummary) {
   try {
-    defaultStorageAdapter.setItem(STORAGE_KEY, data);
+    firestoreStorageAdapter.setItem(STORAGE_KEY, data);
+    defaultCustomerActivityRepository.save({ id: 'current_activity', ...data });
   } catch (e) {
     LoggerService.error('customerStorage', 'Failed to save customer activity to storage', e);
   }
@@ -179,7 +193,7 @@ export function saveInquiryRequest(inq: InquiryRequestRecord): CustomerDocument 
 // Favorites & Recently Viewed
 export function getFavorites(): string[] {
   try {
-    const raw = defaultStorageAdapter.getItem<string[]>(FAVORITES_KEY);
+    const raw = firestoreStorageAdapter.getItem<string[]>(FAVORITES_KEY);
     return raw || [];
   } catch {
     return [];
@@ -191,7 +205,7 @@ export function toggleFavoriteInStorage(productId: string): string[] {
   const exists = current.includes(productId);
   const updated = exists ? current.filter((id) => id !== productId) : [...current, productId];
   try {
-    defaultStorageAdapter.setItem(FAVORITES_KEY, updated);
+    firestoreStorageAdapter.setItem(FAVORITES_KEY, updated);
   } catch (e) {
     LoggerService.error('customerStorage', 'Failed to update favorites in storage', e);
   }
@@ -200,7 +214,7 @@ export function toggleFavoriteInStorage(productId: string): string[] {
 
 export function getRecentlyViewed(): string[] {
   try {
-    const raw = defaultStorageAdapter.getItem<string[]>(RECENTLY_VIEWED_KEY);
+    const raw = firestoreStorageAdapter.getItem<string[]>(RECENTLY_VIEWED_KEY);
     return raw || [];
   } catch {
     return [];
@@ -211,7 +225,7 @@ export function addRecentlyViewedInStorage(productId: string): string[] {
   const current = getRecentlyViewed().filter((id) => id !== productId);
   const updated = [productId, ...current].slice(0, 10);
   try {
-    defaultStorageAdapter.setItem(RECENTLY_VIEWED_KEY, updated);
+    firestoreStorageAdapter.setItem(RECENTLY_VIEWED_KEY, updated);
   } catch (e) {
     LoggerService.error('customerStorage', 'Failed to update recently viewed in storage', e);
   }

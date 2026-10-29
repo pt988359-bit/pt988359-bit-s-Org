@@ -52,11 +52,24 @@ export const ProductCompactView: React.FC<ProductCompactViewProps> = ({
                 {isSelected ? <CheckSquare className="w-4 h-4 text-blue-400" /> : <Square className="w-4 h-4" />}
               </button>
 
-              <img
-                src={p.images?.[0] || 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=100&q=80'}
-                alt={p.title}
-                className="w-10 h-10 rounded-lg object-cover border border-slate-800 shrink-0"
-              />
+              {p.images?.[0] ? (
+                <img
+                  src={p.images[0]}
+                  alt={p.title}
+                  className="w-10 h-10 rounded-lg object-cover border border-slate-800 shrink-0"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                  }}
+                />
+              ) : null}
+              <div
+                className={`${
+                  p.images?.[0] ? 'hidden ' : ''
+                }w-10 h-10 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 text-[9px] text-center shrink-0 leading-tight p-0.5 select-none`}
+              >
+                لا توجد صورة
+              </div>
 
               <div className="min-w-0">
                 <div className="flex items-center gap-2">

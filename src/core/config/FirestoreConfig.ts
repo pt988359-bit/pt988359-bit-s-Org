@@ -4,6 +4,8 @@
  */
 
 export const FIRESTORE_COLLECTIONS = {
+  CATEGORIES: 'categories',
+  SEQUENCE_COUNTERS: 'sequence_counters',
   PRODUCTS: 'products',
   CUSTOMERS: 'customers',
   ORDERS: 'orders',
@@ -33,6 +35,10 @@ export const FIRESTORE_COLLECTIONS = {
   NOTIFICATIONS: 'notifications',
   REPORTS: 'reports',
   FINANCE: 'finance',
+  PROCUREMENT: 'procurement',
+  PURCHASE_HISTORY: 'purchase_history',
+  FINANCIAL_TIMELINE: 'financial_timeline',
+  FINANCIAL_ALERTS: 'financial_alerts',
   INVENTORY: 'inventory',
   ANALYTICS: 'analytics',
 } as const;

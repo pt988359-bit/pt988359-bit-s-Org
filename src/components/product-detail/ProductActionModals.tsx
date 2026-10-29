@@ -1,12 +1,11 @@
 import React from 'react';
 import { Product } from '../../types';
 import { CustomerActionWizardModal } from '../customer/CustomerActionWizardModal';
-import { ReservationModal } from '../public/ReservationModal';
 import { CustomerActionType } from '../../types/customerActions';
 
 interface ProductActionModalsProps {
   product: Product;
-  modalType: 'buy' | 'negotiate' | 'showroom' | 'directions' | 'reserve' | 'exchange' | 'inquiry' | null;
+  modalType: 'buy' | 'negotiate' | 'showroom' | 'directions' | 'exchange' | 'inquiry' | null;
   onClose: () => void;
 }
 
@@ -16,16 +15,6 @@ export const ProductActionModals: React.FC<ProductActionModalsProps> = ({
   onClose,
 }) => {
   if (!modalType) return null;
-
-  if (modalType === 'reserve') {
-    return (
-      <ReservationModal
-        product={product}
-        isOpen={true}
-        onClose={onClose}
-      />
-    );
-  }
 
   let mappedActionType: CustomerActionType = 'request_purchase';
 

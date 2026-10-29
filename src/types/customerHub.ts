@@ -125,7 +125,6 @@ export interface VisitedProduct {
   price: number;
   image: string;
   visitedAt: string;
-  viewCount: number;
 }
 
 export interface Customer {
@@ -142,7 +141,6 @@ export interface Customer {
   lastActivityDate: string; // ISO
   totalRequests: number;
   totalPurchases: number;
-  totalReservations: number;
   totalSpent: number;
   assignedAdmin?: string; // Admin name
   isArchived: boolean;
@@ -179,7 +177,6 @@ export interface CustomerFilterOptions {
   area: string; // 'all' or area name
   vipOnly: boolean;
   hasPurchasesOnly: boolean;
-  hasReservationsOnly: boolean;
   archivedOnly: boolean;
 }
 

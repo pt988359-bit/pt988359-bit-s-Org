@@ -63,8 +63,6 @@ export const AdminApprovalCenter: React.FC<AdminApprovalCenterProps> = ({
     switch (type) {
       case 'purchase_request':
         return 'طلب شراء كاش مباشر';
-      case 'reservation':
-        return 'طلب حجز جهاز';
       case 'negotiation':
         return 'طلب تفاوض وسعر خاص';
       case 'sell_request':
@@ -75,6 +73,8 @@ export const AdminApprovalCenter: React.FC<AdminApprovalCenterProps> = ({
         return 'توصية الذكاء الاصطناعي';
       case 'manual_adjustment':
         return 'تسوية مالية يدوية';
+      default:
+        return 'طلب معلق';
     }
   };
 
@@ -116,7 +116,7 @@ export const AdminApprovalCenter: React.FC<AdminApprovalCenterProps> = ({
                 )}
               </div>
               <p className="text-xs text-slate-400">
-                المركز الموحد لاعتماد الحجوزات، التحويلات، العروض، واستثناءات حارس AI
+                المركز الموحد لاعتماد طلبات الشراء، العروض، واستثناءات حارس AI
               </p>
             </div>
           </div>

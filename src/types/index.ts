@@ -188,7 +188,6 @@ export interface ProductSEO {
 }
 
 export interface ProductAnalytics {
-  views: number;
   uniqueVisitors: number;
   whatsappClicks: number;
   reservationCount: number;
@@ -261,6 +260,7 @@ export interface Product {
   originalPrice?: number;
   minNegotiationPrice?: number;
   isNegotiable: boolean;
+  finalPrice?: number;
 
   // Status & Condition
   condition: ProductCondition;
@@ -319,7 +319,6 @@ export interface Product {
 
   // Analytics
   analytics?: ProductAnalytics;
-  viewsCount?: number;
 
   // Reservation & Visibility
   isReserved?: boolean;
@@ -533,7 +532,6 @@ export interface ShowroomSettings {
   faviconUrl?: string;
   businessPolicies?: {
     warrantyPolicy: string;
-    reservationPolicy: string;
     returnPolicy: string;
     inspectionPolicy: string;
   };
@@ -548,7 +546,6 @@ export interface AnalyticsSummary {
   totalProducts: number;
   availableProducts: number;
   reservedProducts: number;
-  totalReservations: number;
   totalSales: number;
   totalRevenue: number;
   tradeRequestsCount: number;

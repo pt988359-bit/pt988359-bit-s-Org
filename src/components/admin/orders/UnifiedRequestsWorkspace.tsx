@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { defaultRequestRepository, RequestRepository, UnifiedCustomerRequest, RequestStatus, UnifiedRequestType } from '../../../core/repositories/RequestRepository';
+import { defaultCashLedgerRepository } from '../../../core/repositories/CashLedgerRepository';
+import { defaultSequenceRepository } from '../../../core/repositories/SequenceRepository';
+import { CashLedgerEntry } from '../../../types/adminFinance';
+import { IdGenerator } from '../../../core/services/IdGenerator';
 import { WhatsAppMessageBuilder } from '../../../core/services/WhatsAppMessageBuilder';
 import { useToast } from '../../../context/ToastContext';
 import { useShowroom } from '../../../context/ShowroomContext';
@@ -23,6 +27,9 @@ import {
   Tag,
   ShieldCheck,
   ChevronDown,
+  RefreshCw,
+  Coins,
+  X,
 } from 'lucide-react';
 
 interface UnifiedRequestsWorkspaceProps {
@@ -35,7 +42,7 @@ export const UnifiedRequestsWorkspace: React.FC<UnifiedRequestsWorkspaceProps> =
   onSelectProduct,
 }) => {
   const { showToast } = useToast();
-  const { updateProductStatus, cancelReservation, navigateTo } = useShowroom();
+  const { products, updateProductStatus, navigateTo } = useShowroom();
 
   const [requests, setRequests] = useState<UnifiedCustomerRequest[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -44,27 +51,74 @@ export const UnifiedRequestsWorkspace: React.FC<UnifiedRequestsWorkspaceProps> =
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [activeModalRequest, setActiveModalRequest] = useState<UnifiedCustomerRequest | null>(null);
   const [adminNoteInput, setAdminNoteInput] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastSyncedTime, setLastSyncedTime] = useState<string>('');
+  const [saleConfirmRequest, setSaleConfirmRequest] = useState<UnifiedCustomerRequest | null>(null);
+  const [saleFinalPrice, setSaleFinalPrice] = useState<number>(0);
 
-  // Load and subscribe requests
-  const loadRequests = () => {
-    const all = defaultRequestRepository.getAll();
-    // Sort by priority score (ascending) and then by date (descending)
-    all.sort((a, b) => {
+  // Process and sort requests by priority score and date
+  const processAndSetRequests = (items: UnifiedCustomerRequest[]) => {
+    const sorted = [...items].sort((a, b) => {
       const pA = RequestRepository.calculatePriorityScore(a);
       const pB = RequestRepository.calculatePriorityScore(b);
       if (pA !== pB) return pA - pB;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-    setRequests(all);
+    setRequests(sorted);
+    setLastSyncedTime(new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
   };
 
+  // Load requests from repository
+  const loadRequests = () => {
+    const all = defaultRequestRepository.getAll();
+    processAndSetRequests(all);
+  };
+
+  // Real-time live subscription to customer_requests
   useEffect(() => {
+    // 1. Initial cached load
     loadRequests();
+
+    // 2. Attach real-time subscription for live updates
+    const unsubscribe = defaultRequestRepository.subscribe((liveItems) => {
+      if (Array.isArray(liveItems)) {
+        processAndSetRequests(liveItems);
+      }
+    });
+
+    // 3. Proactive initial remote fetch from cloud
+    defaultRequestRepository
+      .fetchLive()
+      .then((liveItems) => {
+        if (Array.isArray(liveItems) && liveItems.length > 0) {
+          processAndSetRequests(liveItems);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
+
+  // Manual refresh fallback
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      const liveItems = await defaultRequestRepository.fetchLive();
+      processAndSetRequests(liveItems);
+      showToast('مزامنة ناجحة', `تم تحديث (${liveItems.length}) طلب مباشرة من السحابة`, 'success');
+    } catch (err) {
+      loadRequests();
+      showToast('تنبيه المزامنة', 'تعذر الاتصال المباشر بالسحابة، تم عرض البيانات المخزنة محلياً', 'warning');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // Handle Quick Actions
   const handleOpenWhatsApp = (req: UnifiedCustomerRequest) => {
-    const text = WhatsAppMessageBuilder.buildReservationMessage(
+    const text = WhatsAppMessageBuilder.buildPurchaseMessage(
       { name: req.customer.fullName, phone: req.customer.phone },
       { title: req.productTitle || 'جهاز المعرض', code: req.productId || '', price: req.productPrice || 0 }
     );
@@ -99,19 +153,74 @@ export const UnifiedRequestsWorkspace: React.FC<UnifiedRequestsWorkspaceProps> =
   };
 
   const handleCompleteSale = (req: UnifiedCustomerRequest) => {
+    const defaultPrice =
+      req.type === 'negotiation' && typeof req.details?.offeredPrice === 'number'
+        ? req.details.offeredPrice
+        : (req.productPrice || 0);
+
+    setSaleConfirmRequest(req);
+    setSaleFinalPrice(defaultPrice);
+  };
+
+  const confirmCompleteSale = async () => {
+    if (!saleConfirmRequest) return;
+    const req = saleConfirmRequest;
+    const finalPrice = Math.max(0, Number(saleFinalPrice) || 0);
+
+    // 1. Save finalPrice in request via RequestRepository
+    defaultRequestRepository.updateStatus(
+      req.id,
+      'completed',
+      `تم إتمام عملية البيع والتسليم المباشر بنجاح بسعر نهائي: ${finalPrice.toLocaleString('ar-EG')} ج.م`,
+      'Showroom Admin',
+      finalPrice
+    );
+
+    // 2. Create cash ledger entry
+    const seq = await defaultSequenceRepository.incrementCounter('FIN');
+    const year = new Date().getFullYear();
+    const padded = String(seq).padStart(6, '0');
+    const referenceNumber = `FIN-${year}-${padded}`;
+
+    const lastBalance = defaultCashLedgerRepository.getLatestRunningBalance();
+    const runningBalance = (lastBalance || 0) + finalPrice;
+
+    const newCashEntry: CashLedgerEntry = {
+      id: IdGenerator.generateUniqueId('cash'),
+      referenceNumber,
+      type: 'money_in',
+      category: 'بيع جهاز',
+      amount: finalPrice,
+      description: `بيع ${req.productTitle || 'جهاز'} للعميل ${req.customer.fullName}`,
+      relatedReference: req.referenceNumber,
+      createdBy: 'Showroom Admin',
+      timestamp: new Date().toISOString(),
+      runningBalance,
+      isArchived: false,
+    };
+
+    defaultCashLedgerRepository.save(newCashEntry);
+
+    // 3. Update product status to sold with soldAt and finalPrice
     if (req.productId) {
-      updateProductStatus(req.productId, 'sold');
+      updateProductStatus(req.productId, 'sold', finalPrice);
     }
-    if (req.type === 'reservation' && req.details?.reservationId) {
-      cancelReservation(req.details.reservationId);
-    }
-    defaultRequestRepository.updateStatus(req.id, 'completed', 'تمت عملية البيع والتسليم المباشر بنجاح بالمعرض');
+
+    // 4. Reload requests & update active modal if open
     loadRequests();
     if (activeModalRequest && activeModalRequest.id === req.id) {
       const updated = defaultRequestRepository.getById(req.id);
       if (updated) setActiveModalRequest(updated);
     }
-    showToast('إتمام البيع', `تم إتمام بيع الجهاز للعميل ${req.customer.fullName} وتحديث السجلات تلقائياً`, 'success');
+
+    // 5. Toast notification
+    showToast(
+      'إتمام البيع',
+      `تم إتمام البيع بسعر ${finalPrice.toLocaleString('ar-EG')} ج.م وتسجيل الحركة المالية بنجاح`,
+      'success'
+    );
+
+    setSaleConfirmRequest(null);
   };
 
   const handleCancelRequest = (req: UnifiedCustomerRequest) => {
@@ -124,11 +233,16 @@ export const UnifiedRequestsWorkspace: React.FC<UnifiedRequestsWorkspaceProps> =
     showToast('إلغاء الطلب', 'تم إلغاء الطلب وإعادة توجيه البيانات', 'info');
   };
 
-  const handleDeleteRequest = (reqId: string) => {
-    defaultRequestRepository.remove(reqId);
-    loadRequests();
-    if (activeModalRequest?.id === reqId) setActiveModalRequest(null);
-    showToast('حذف الطلب', 'تم حذف الطلب نهائياً من النظام', 'info');
+  const handleDeleteRequest = async (reqId: string) => {
+    try {
+      await defaultRequestRepository.remove(reqId);
+      loadRequests();
+      if (activeModalRequest?.id === reqId) setActiveModalRequest(null);
+      showToast('حذف الطلب', 'تم حذف الطلب نهائياً من النظام', 'info');
+    } catch (err: any) {
+      loadRequests();
+      showToast('خطأ في الحذف', err?.message || 'تعذر حذف الطلب', 'error');
+    }
   };
 
   const handleAddNote = (reqId: string) => {
@@ -193,7 +307,14 @@ export const UnifiedRequestsWorkspace: React.FC<UnifiedRequestsWorkspaceProps> =
   };
 
   // Filter & Search Logic
+  const activeOrdersCount = requests.filter((r) => r.type !== 'inquiry').length;
+
   const filteredRequests = requests.filter((req) => {
+    // Hide historical inquiries from the normal table view unless searching explicitly or viewing archive
+    if (req.type === 'inquiry' && !searchQuery.trim() && statusFilter !== 'archived') {
+      return false;
+    }
+
     const q = searchQuery.toLowerCase();
     const matchesSearch =
       !q ||
@@ -203,7 +324,7 @@ export const UnifiedRequestsWorkspace: React.FC<UnifiedRequestsWorkspaceProps> =
       (req.productTitle && req.productTitle.toLowerCase().includes(q)) ||
       (req.productId && req.productId.toLowerCase().includes(q));
 
-    const matchesType = typeFilter === 'all' || req.type === typeFilter;
+    const matchesType = typeFilter === 'all' ? req.type !== 'inquiry' : req.type === typeFilter;
     const matchesStatus = statusFilter === 'all' || req.status === statusFilter;
 
     return matchesSearch && matchesType && matchesStatus;
@@ -211,8 +332,6 @@ export const UnifiedRequestsWorkspace: React.FC<UnifiedRequestsWorkspaceProps> =
 
   const getTypeBadge = (type: UnifiedRequestType) => {
     switch (type) {
-      case 'reservation':
-        return { label: 'حجز 24 ساعة', color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' };
       case 'purchase':
         return { label: 'طلب شراء', color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' };
       case 'negotiation':
@@ -222,7 +341,9 @@ export const UnifiedRequestsWorkspace: React.FC<UnifiedRequestsWorkspaceProps> =
       case 'trade_in':
         return { label: 'طلب استبدال', color: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' };
       case 'inquiry':
-        return { label: 'استفسار عام', color: 'bg-slate-800 text-slate-300 border-slate-700' };
+        return { label: 'استفسار سابق', color: 'bg-slate-800 text-slate-400 border-slate-700' };
+      default:
+        return { label: 'طلب عام', color: 'bg-slate-800 text-slate-300 border-slate-700' };
     }
   };
 
@@ -273,13 +394,11 @@ export const UnifiedRequestsWorkspace: React.FC<UnifiedRequestsWorkspaceProps> =
                 onChange={(e) => setTypeFilter(e.target.value)}
                 className="bg-transparent text-xs text-slate-200 outline-none cursor-pointer"
               >
-                <option value="all">كافة أنواع الطلبات ({requests.length})</option>
-                <option value="reservation">الحجوزات (Reservation)</option>
+                <option value="all">كافة أنواع الطلبات ({activeOrdersCount})</option>
                 <option value="purchase">طلبات الشراء (Purchase)</option>
                 <option value="negotiation">التفاوض (Negotiation)</option>
                 <option value="sell_device">بيع جهاز للمعرض (Sell Device)</option>
                 <option value="trade_in">الاستبدال (Trade)</option>
-                <option value="inquiry">استفسارات عامة (Inquiry)</option>
               </select>
             </div>
 
@@ -297,8 +416,21 @@ export const UnifiedRequestsWorkspace: React.FC<UnifiedRequestsWorkspaceProps> =
                 <option value="waiting_customer">في انتظار العميل (Waiting)</option>
                 <option value="completed">مكتمل / تم البيع (Completed)</option>
                 <option value="cancelled">ملغى (Cancelled)</option>
+                <option value="archived">أرشيف الطلبات (Archived)</option>
               </select>
             </div>
+
+            <button
+              onClick={handleManualRefresh}
+              disabled={isRefreshing}
+              className={`px-4 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                isRefreshing ? 'opacity-70 cursor-not-allowed' : ''
+              }`}
+              title={lastSyncedTime ? `آخر مزامنة سحابية: ${lastSyncedTime}` : 'تحديث من السحابة'}
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-blue-400 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <span>{isRefreshing ? 'جارٍ المزامنة...' : 'تحديث الآن'}</span>
+            </button>
 
             <button
               onClick={handleExportCSV}
@@ -438,17 +570,33 @@ export const UnifiedRequestsWorkspace: React.FC<UnifiedRequestsWorkspaceProps> =
 
                       {/* Product & Price */}
                       <td className="p-4">
-                        <div className="space-y-0.5">
-                          <span className="font-extrabold text-slate-200 block truncate max-w-[200px]">
-                            {req.productTitle || 'بدون جهاز مخصص'}
-                          </span>
-                          {req.productPrice ? (
-                            <span className="font-black text-emerald-400 font-mono">
-                              {req.productPrice.toLocaleString('ar-EG')} ج.م
+                        <div className="flex items-center gap-3">
+                          {(() => {
+                            const matchedProduct = products.find((p) => p.id === req.productId);
+                            const imgUrl = matchedProduct?.images?.[0] || req.productImage;
+                            return imgUrl ? (
+                              <img
+                                src={imgUrl}
+                                alt={req.productTitle || ''}
+                                className="w-10 h-10 rounded-xl object-cover border border-slate-800 shrink-0"
+                                onError={(e) => {
+                                  (e.currentTarget as HTMLElement).style.display = 'none';
+                                }}
+                              />
+                            ) : null;
+                          })()}
+                          <div className="space-y-0.5 min-w-0">
+                            <span className="font-extrabold text-slate-200 block truncate max-w-[200px]">
+                              {req.productTitle || 'بدون جهاز مخصص'}
                             </span>
-                          ) : (
-                            <span className="text-slate-500 text-[10px]">حسب المعاينة</span>
-                          )}
+                            {req.productPrice ? (
+                              <span className="font-black text-emerald-400 font-mono">
+                                {req.productPrice.toLocaleString('ar-EG')} ج.م
+                              </span>
+                            ) : (
+                              <span className="text-slate-500 text-[10px]">حسب المعاينة</span>
+                            )}
+                          </div>
                         </div>
                       </td>
 
@@ -604,16 +752,32 @@ export const UnifiedRequestsWorkspace: React.FC<UnifiedRequestsWorkspaceProps> =
                     <Package className="w-4 h-4" />
                     <span>تفاصيل الجهاز المطلوب</span>
                   </h4>
-                  <div className="space-y-1.5">
-                    <p className="text-white font-extrabold">{activeModalRequest.productTitle || 'بدون تحديد جهاز'}</p>
-                    {activeModalRequest.productPrice && (
-                      <p className="text-emerald-400 font-mono font-black text-sm">
-                        {activeModalRequest.productPrice.toLocaleString('ar-EG')} ج.م
-                      </p>
-                    )}
-                    {activeModalRequest.productId && (
-                      <p className="text-slate-400 font-mono text-[10px]">كود الجهاز: {activeModalRequest.productId}</p>
-                    )}
+                  <div className="flex items-center gap-3">
+                    {(() => {
+                      const matchedProduct = products.find((p) => p.id === activeModalRequest.productId);
+                      const imgUrl = matchedProduct?.images?.[0] || activeModalRequest.productImage;
+                      return imgUrl ? (
+                        <img
+                          src={imgUrl}
+                          alt={activeModalRequest.productTitle || ''}
+                          className="w-14 h-14 rounded-xl object-cover border border-slate-800 shrink-0"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                      ) : null;
+                    })()}
+                    <div className="space-y-1.5 flex-1 min-w-0">
+                      <p className="text-white font-extrabold">{activeModalRequest.productTitle || 'بدون تحديد جهاز'}</p>
+                      {activeModalRequest.productPrice && (
+                        <p className="text-emerald-400 font-mono font-black text-sm">
+                          {activeModalRequest.productPrice.toLocaleString('ar-EG')} ج.م
+                        </p>
+                      )}
+                      {activeModalRequest.productId && (
+                        <p className="text-slate-400 font-mono text-[10px]">كود الجهاز: {activeModalRequest.productId}</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -696,6 +860,97 @@ export const UnifiedRequestsWorkspace: React.FC<UnifiedRequestsWorkspaceProps> =
                 className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold shadow-lg"
               >
                 إتمام بيع الشحنة والجهاز
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal for Final Sale Price & Financial Movement */}
+      {saleConfirmRequest && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-slate-900 border border-slate-700 rounded-3xl p-6 shadow-2xl text-white text-right dir-rtl space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <Coins className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-lg text-white">تأكيد سعر البيع النهائي</h3>
+                  <span className="text-[11px] text-slate-400 font-mono">{saleConfirmRequest.referenceNumber}</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setSaleConfirmRequest(null)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-sm bg-slate-950/70 p-4 rounded-2xl border border-slate-800">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 text-xs">العميل:</span>
+                <span className="font-bold text-white">{saleConfirmRequest.customer.fullName}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 text-xs">الجهاز:</span>
+                <span className="font-bold text-blue-400 truncate max-w-[220px]">{saleConfirmRequest.productTitle || 'جهاز المعرض'}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 text-xs">سعر العرض الأصلي:</span>
+                <span className="font-bold text-slate-300 font-mono">
+                  {(saleConfirmRequest.productPrice || 0).toLocaleString()} ج.م
+                </span>
+              </div>
+              {saleConfirmRequest.type === 'negotiation' && typeof saleConfirmRequest.details?.offeredPrice === 'number' && (
+                <div className="flex justify-between items-center bg-amber-500/10 border border-amber-500/20 px-3 py-2 rounded-xl">
+                  <span className="text-amber-300 text-xs font-bold">السعر المقترح من العميل للتفاوض:</span>
+                  <span className="font-black text-amber-400 font-mono">
+                    {saleConfirmRequest.details.offeredPrice.toLocaleString()} ج.م
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-slate-300">
+                سعر البيع الفعلي النهائي (ج.م) <span className="text-rose-400">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="0"
+                  value={saleFinalPrice}
+                  onChange={(e) => setSaleFinalPrice(Number(e.target.value))}
+                  className="w-full bg-slate-950 border border-slate-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-xl px-4 py-3 text-lg font-black text-emerald-400 font-mono text-left outline-none transition-all"
+                  placeholder="أدخل سعر البيع الفعلي..."
+                />
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500 pointer-events-none">
+                  ج.م
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                سيتم حفظ هذا السعر في الطلب وسجل المنتج، وتسجيل حركة قبض خزينة تلقائية بقيمة{' '}
+                <span className="font-mono text-emerald-400 font-bold">{saleFinalPrice.toLocaleString()} ج.م</span>.
+              </p>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={confirmCompleteSale}
+                className="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm shadow-lg shadow-emerald-900/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>تأكيد البيع وتسجيل الخزينة</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSaleConfirmRequest(null)}
+                className="py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-sm transition-all cursor-pointer"
+              >
+                إلغاء
               </button>
             </div>
           </div>

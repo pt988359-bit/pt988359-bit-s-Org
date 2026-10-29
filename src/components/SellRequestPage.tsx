@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { SellRequest } from '../types';
 import { formatPhoneForDisplay, normalizeEgyptianPhone } from '../utils/phoneUtils';
+import { WhatsAppMessageBuilder } from '../core/services/WhatsAppMessageBuilder';
 
 export const SellRequestPage: React.FC = () => {
   const { submitSellRequest, navigateTo, settings } = useShowroom();
@@ -56,9 +57,7 @@ export const SellRequestPage: React.FC = () => {
   const [problemsOrDefects, setProblemsOrDefects] = useState<string>('لا يوجد عيوب تشغيلية');
 
   // Step 3: Media
-  const [photoUrls, setPhotoUrls] = useState<string[]>([
-    'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=800&q=80',
-  ]);
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [newImageUrl, setNewImageUrl] = useState<string>('');
   const [videoUrl, setVideoUrl] = useState<string>('');
 
@@ -113,14 +112,6 @@ export const SellRequestPage: React.FC = () => {
         return 'مثال: الأبعاد والقياسات الأساسية';
     }
   };
-
-  // Preset sample images for quick selection
-  const sampleMediaOptions = [
-    'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1585338107529-13afc5f02586?auto=format&fit=crop&w=800&q=80',
-  ];
 
   const handleAddImage = () => {
     if (!newImageUrl.trim()) return;
@@ -227,6 +218,28 @@ export const SellRequestPage: React.FC = () => {
       location: `${area} - ${address}`,
       status: 'new',
     });
+
+    try {
+      const msg = WhatsAppMessageBuilder.buildSellDeviceMessage(
+        {
+          name: customerName,
+          phone: customerPhone,
+          email: customerEmail,
+        },
+        {
+          deviceType: category,
+          brand,
+          model,
+          condition,
+          description: description || deviceName,
+          expectedPrice: parseFloat(askingPrice) || 0,
+          requestNumber: created.requestNumber,
+        }
+      );
+      WhatsAppMessageBuilder.openWhatsApp(settings.whatsappPhone, msg);
+    } catch (err) {
+      console.error('Failed to open WhatsApp for sell request:', err);
+    }
 
     setSubmittedRequest(created);
     showToast('تم استلام الطلب بنجاح', `رقم الطلب الخاص بك: ${created.requestNumber}`, 'success');
@@ -714,25 +727,6 @@ export const SellRequestPage: React.FC = () => {
                     <Button type="button" variant="electric" onClick={handleAddImage} leftIcon={<Upload className="w-4 h-4" />}>
                       إضافة
                     </Button>
-                  </div>
-
-                  {/* Sample presets for quick testing */}
-                  <div className="text-[11px] text-slate-500">
-                    <span>أو اختر صورة جاهزة كنموذج تجريبي: </span>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {sampleMediaOptions.map((url, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => {
-                            if (!photoUrls.includes(url)) setPhotoUrls((prev) => [...prev, url]);
-                          }}
-                          className="px-2.5 py-1 rounded-lg bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-blue-500 hover:text-white text-[11px] transition-colors cursor-pointer"
-                        >
-                          صورة نموذج {idx + 1}
-                        </button>
-                      ))}
-                    </div>
                   </div>
                 </div>
 

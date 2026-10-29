@@ -13,6 +13,8 @@ import {
   findDuplicateCandidates,
   exportCustomersToCSV,
 } from '../../utils/customerHubStorage';
+import { defaultRequestRepository } from '../../core/repositories/RequestRepository';
+import { getCustomerDynamicStats } from '../../utils/customerStats';
 
 // Sub Components
 import { CustomerTable } from './customers/CustomerTable';
@@ -48,7 +50,6 @@ export const AdminCustomersView: React.FC = () => {
   const [selectedArea, setSelectedArea] = useState('all');
   const [vipOnly, setVipOnly] = useState(false);
   const [hasPurchasesOnly, setHasPurchasesOnly] = useState(false);
-  const [hasReservationsOnly, setHasReservationsOnly] = useState(false);
   const [archivedOnly, setArchivedOnly] = useState(false);
 
   // Modals
@@ -63,6 +64,29 @@ export const AdminCustomersView: React.FC = () => {
     setCustomers(loaded);
   }, []);
 
+  // Dynamic Requests Subscription & Computation
+  const [requestsRevision, setRequestsRevision] = useState(0);
+
+  useEffect(() => {
+    const unsub = defaultRequestRepository.subscribe(() => {
+      setRequestsRevision((v) => v + 1);
+    });
+    return () => unsub();
+  }, []);
+
+  // Compute totalRequests and totalPurchases dynamically at display time
+  const customersWithDynamicStats = React.useMemo(() => {
+    const allRequests = defaultRequestRepository.getAll();
+    return customers.map((c) => {
+      const stats = getCustomerDynamicStats(c.primaryPhone, c.whatsappPhone, allRequests);
+      return {
+        ...c,
+        totalRequests: stats.totalRequests,
+        totalPurchases: stats.totalPurchases,
+      };
+    });
+  }, [customers, requestsRevision]);
+
   // Filter Logic
   const filterOptions: CustomerFilterOptions = {
     searchQuery,
@@ -70,11 +94,24 @@ export const AdminCustomersView: React.FC = () => {
     area: selectedArea,
     vipOnly,
     hasPurchasesOnly,
-    hasReservationsOnly,
     archivedOnly,
   };
 
-  const filteredCustomers = filterCustomers(customers, filterOptions);
+  const filteredCustomers = filterCustomers(customersWithDynamicStats, filterOptions);
+
+  // Active Workspace Customer with real-time dynamic stats
+  const activeWorkspaceCustomer = React.useMemo(() => {
+    if (!workspaceCustomer) return null;
+    const stats = getCustomerDynamicStats(
+      workspaceCustomer.primaryPhone,
+      workspaceCustomer.whatsappPhone
+    );
+    return {
+      ...workspaceCustomer,
+      totalRequests: stats.totalRequests,
+      totalPurchases: stats.totalPurchases,
+    };
+  }, [workspaceCustomer, requestsRevision]);
 
   // Duplicate Candidates
   const duplicatesCount = findDuplicateCandidates(customers).length;
@@ -92,7 +129,7 @@ export const AdminCustomersView: React.FC = () => {
       primaryPhone: data.primaryPhone || BUSINESS_CONFIG.phone,
       whatsappPhone: data.whatsappPhone || BUSINESS_CONFIG.whatsappPhone,
       email: data.email || '',
-      address: data.address || { governorate: 'القاهرة', cityArea: 'المعادي' },
+      address: data.address || { governorate: '', cityArea: '', streetAddress: '' },
       preferredContactMethod: data.preferredContactMethod || 'whatsapp',
       status: data.status || 'new',
       tags: data.tags || ['جديد'],
@@ -100,7 +137,6 @@ export const AdminCustomersView: React.FC = () => {
       lastActivityDate: new Date().toISOString(),
       totalRequests: 0,
       totalPurchases: 0,
-      totalReservations: 0,
       totalSpent: 0,
       assignedAdmin: data.assignedAdmin || 'PRO TECK Admin',
       isArchived: false,
@@ -131,7 +167,16 @@ export const AdminCustomersView: React.FC = () => {
 
     const updated = customers.map((c) => {
       if (c.id === targetId) {
-        const merged = { ...c, ...customerData, lastActivityDate: new Date().toISOString() };
+        const merged = {
+          ...c,
+          ...customerData,
+          address: {
+            governorate: customerData.address?.governorate || c.address?.governorate || '',
+            cityArea: customerData.address?.cityArea || c.address?.cityArea || '',
+            streetAddress: customerData.address?.streetAddress ?? c.address?.streetAddress ?? '',
+          },
+          lastActivityDate: new Date().toISOString(),
+        };
         if (workspaceCustomer && workspaceCustomer.id === targetId) {
           setWorkspaceCustomer(merged);
         }
@@ -164,7 +209,6 @@ export const AdminCustomersView: React.FC = () => {
           ...c,
           totalSpent: c.totalSpent + secondary.totalSpent,
           totalPurchases: c.totalPurchases + secondary.totalPurchases,
-          totalReservations: c.totalReservations + secondary.totalReservations,
           totalRequests: c.totalRequests + secondary.totalRequests,
           notes: [...secondary.notes, ...c.notes],
           communicationLogs: [...secondary.communicationLogs, ...c.communicationLogs],
@@ -319,16 +363,6 @@ export const AdminCustomersView: React.FC = () => {
             <span>أصحاب صفقات شراء مكتملة</span>
           </label>
 
-          <label className="flex items-center gap-1.5 text-blue-300 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={hasReservationsOnly}
-              onChange={(e) => setHasReservationsOnly(e.target.checked)}
-              className="w-4 h-4 rounded bg-slate-950 border-slate-800 text-blue-500 focus:ring-0 cursor-pointer"
-            />
-            <span>أصحاب حجوزات سارية</span>
-          </label>
-
           <label className="flex items-center gap-1.5 text-slate-400 hover:text-rose-400 cursor-pointer mr-auto">
             <input
               type="checkbox"
@@ -370,9 +404,9 @@ export const AdminCustomersView: React.FC = () => {
       )}
 
       {/* Customer Workspace Modal */}
-      {workspaceCustomer && (
+      {activeWorkspaceCustomer && (
         <CustomerWorkspaceModal
-          customer={workspaceCustomer}
+          customer={activeWorkspaceCustomer}
           onClose={() => setWorkspaceCustomer(null)}
           onUpdateCustomer={handleUpdateCustomer}
           onSoftDeleteCustomer={handleSoftDeleteCustomer}

@@ -5,13 +5,14 @@
 
 import { BaseRepository } from './BaseRepository';
 import { StorageAdapter } from '../storage/StorageAdapter';
-import { defaultStorageAdapter } from '../storage/LocalStorageAdapter';
+import { firestoreStorageAdapter } from '../storage/FirestoreStorageAdapter';
 import { ExpenseItem } from '../../types/adminFinance';
+import { FIRESTORE_COLLECTIONS } from '../config/FirestoreConfig';
 
-const EXPENSES_KEY = 'proteck_admin_expenses_v1';
+const EXPENSES_KEY = FIRESTORE_COLLECTIONS.EXPENSES;
 
 export class ExpenseRepository extends BaseRepository<ExpenseItem> {
-  constructor(storage: StorageAdapter = defaultStorageAdapter) {
+  constructor(storage: StorageAdapter = firestoreStorageAdapter) {
     super(EXPENSES_KEY, storage);
   }
 

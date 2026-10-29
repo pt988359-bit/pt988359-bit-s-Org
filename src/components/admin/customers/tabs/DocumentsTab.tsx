@@ -16,7 +16,7 @@ export const DocumentsTab: React.FC<DocumentsTabProps> = ({ customer, onPreviewD
           <span>المستندات وإيصالات العميل الصادرة ({customer.documents.length})</span>
         </h3>
         <p className="text-slate-400 text-[11px] mt-0.5">
-          إيصالات الحجز والعربون، الفواتير، وشهادات الضمان المستقبلية المعتمدة
+          الفواتير، وشهادات الضمان المستقبلية المعتمدة
         </p>
       </div>
 

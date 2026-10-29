@@ -23,7 +23,7 @@ export const FinalCta: React.FC = () => {
         </h2>
 
         <p className="text-slate-300 text-sm sm:text-base leading-relaxed max-w-2xl">
-          تفضل بزيارة صالة العرض بالمعادي لاختبار وتجربة أحدث الأجهزة الجديدة والمستعملة المضمونة، أو احجز جهازك أونلاين الآن بخطوات بسيطة.
+          تفضل بزيارة صالة العرض بالمعادي لاختبار وتجربة أحدث الأجهزة الجديدة والمستعملة المضمونة، أو اطلب جهازك أونلاين الآن بخطوات بسيطة.
         </p>
 
         <div className="flex flex-wrap items-center justify-center gap-4 pt-4">

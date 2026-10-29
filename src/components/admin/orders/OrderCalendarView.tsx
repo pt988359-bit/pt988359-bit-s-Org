@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
-import { ReservationItem, PurchaseRequest } from '../../../types/orderManagementCenter';
+import { PurchaseRequest } from '../../../types/orderManagementCenter';
 import { Calendar as CalendarIcon, ChevronRight, ChevronLeft, Clock, User, AlertCircle } from 'lucide-react';
 
 interface OrderCalendarViewProps {
-  reservations: ReservationItem[];
   purchaseRequests: PurchaseRequest[];
   onSelectOrder: (item: any, type: string) => void;
 }
 
 export const OrderCalendarView: React.FC<OrderCalendarViewProps> = ({
-  reservations,
   purchaseRequests,
   onSelectOrder,
 }) => {
@@ -28,8 +26,8 @@ export const OrderCalendarView: React.FC<OrderCalendarViewProps> = ({
             <CalendarIcon className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="font-extrabold text-sm text-white">جدول مواعيد الحجوزات والمعاينات (Calendar View)</h3>
-            <p className="text-slate-400 text-[11px]">تتبع مواعيد انتهاء الحجوزات والتسليم بالفرع</p>
+            <h3 className="font-extrabold text-sm text-white">جدول مواعيد طلبات الشراء والمعاينات (Calendar View)</h3>
+            <p className="text-slate-400 text-[11px]">تتبع مواعيد طلبات الشراء والمعاينة بالفرع</p>
           </div>
         </div>
 
@@ -76,8 +74,8 @@ export const OrderCalendarView: React.FC<OrderCalendarViewProps> = ({
       {/* Days Grid */}
       <div className="grid grid-cols-7 gap-2">
         {daysInMonth.map((dayNum) => {
-          // Find matching reservations for this day (simulated logic)
-          const matchedRes = reservations.filter((r) => new Date(r.createdAt).getDate() % 30 === dayNum % 30);
+          // Find matching purchase requests for this day
+          const matchedRequests = purchaseRequests.filter((r) => new Date(r.createdAt).getDate() % 30 === dayNum % 30);
           const isToday = dayNum === today.getDate();
 
           return (
@@ -97,20 +95,20 @@ export const OrderCalendarView: React.FC<OrderCalendarViewProps> = ({
                 >
                   {dayNum}
                 </span>
-                {matchedRes.length > 0 && (
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                {matchedRequests.length > 0 && (
+                  <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
                 )}
               </div>
 
               {/* Scheduled Event Chips */}
               <div className="space-y-1 my-1 overflow-y-auto max-h-[70px] custom-scrollbar">
-                {matchedRes.map((res) => (
+                {matchedRequests.map((req) => (
                   <button
-                    key={res.id}
-                    onClick={() => onSelectOrder(res, 'reservation')}
-                    className="w-full text-right p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all text-[10px] text-emerald-300 font-bold block truncate cursor-pointer"
+                    key={req.id}
+                    onClick={() => onSelectOrder(req, 'request')}
+                    className="w-full text-right p-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 transition-all text-[10px] text-blue-300 font-bold block truncate cursor-pointer"
                   >
-                    ⌛ {res.reservationNumber} - {res.customerName}
+                    📦 {req.referenceNumber} - {req.customerName}
                   </button>
                 ))}
               </div>

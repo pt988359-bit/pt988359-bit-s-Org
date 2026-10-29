@@ -9,6 +9,7 @@ import {
   Building2,
 } from 'lucide-react';
 import { useShowroom } from '../../context/ShowroomContext';
+import { normalizeEgyptianPhone } from '../../utils/phoneUtils';
 
 import { BUSINESS_CONFIG } from '../../config/businessConfig';
 
@@ -39,14 +40,16 @@ export const VisitShowroom: React.FC = () => {
         <div className="lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-[32px] p-6 sm:p-8 flex flex-col justify-between shadow-lg">
           <div className="space-y-6">
             {/* Showroom Image Placeholder */}
-            <div className="relative w-full h-64 sm:h-72 rounded-2xl overflow-hidden shadow-md">
-              <img
-                src="https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1200&q=80"
-                alt="PRO TECK Showroom Maadi"
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent" />
-              <div className="absolute bottom-4 right-4 text-white space-y-1">
+            <div className="relative w-full h-64 sm:h-72 rounded-2xl overflow-hidden shadow-md bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+              <div className="text-center p-6 space-y-2 select-none">
+                <div className="w-16 h-16 rounded-2xl bg-blue-600/20 text-blue-400 mx-auto flex items-center justify-center mb-2 border border-blue-500/30">
+                  <Building2 className="w-8 h-8" />
+                </div>
+                <h4 className="text-white font-extrabold text-base">معرض PRO TECK المعادي</h4>
+                <p className="text-slate-400 text-xs">أكبر تشكيلة أجهزة كهربائية فرز أول ومستعملة بالضمان</p>
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent pointer-events-none" />
+              <div className="absolute bottom-4 right-4 text-white space-y-1 z-10">
                 <span className="px-3 py-1 bg-blue-600 rounded-full text-[10px] font-bold tracking-widest uppercase">
                   معرض PRO TECK الرئيسي
                 </span>
@@ -99,7 +102,7 @@ export const VisitShowroom: React.FC = () => {
             </a>
 
             <a
-              href={`https://wa.me/${settings.whatsappPhone}`}
+              href={`https://wa.me/${normalizeEgyptianPhone(settings.whatsappPhone || settings.phone)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs"

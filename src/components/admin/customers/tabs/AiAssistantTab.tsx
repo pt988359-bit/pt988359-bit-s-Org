@@ -37,7 +37,7 @@ export const AiAssistantTab: React.FC<AiAssistantTabProps> = ({ customer, onAddN
         result = `📋 ملخص تاريخ العميل الشامل (${customer.fullName}):
 • كود العميل: ${customer.id} | الحالة: ${customer.status.toUpperCase()}
 • إجمالي المبيعات المكتملة: ${customer.totalSpent.toLocaleString('ar-EG')} ج.م عبر ${customer.totalPurchases} صفقات شراء.
-• عدد الحجوزات والطلبات: ${customer.totalRequests} طلبات شاملة ${customer.totalReservations} حجوزات.
+• عدد الطلبات: ${customer.totalRequests} طلبات مشتريات وتفاوض.
 • الملاحظات الرئيسية: العميل يفضل التواصل عبر الواتساب، ويهتم بأجهزة النوفروست والشاشات.
 • التقييم العام: عميل هاديء عالي القيمة (High-Value Customer) يحتاج متابعة تسليم الفواتير في المواعيد المحددة.`;
       } else if (type === 'draft_whatsapp') {
@@ -49,18 +49,18 @@ export const AiAssistantTab: React.FC<AiAssistantTabProps> = ({ customer, onAddN
       } else if (type === 'followup') {
         result = `مساء الخير أستاذ ${customer.fullName}🌸
 أتمنى أن تكون بخير وعافية.
-نود المتابعة معكم بشأن طلب الحجز الأخير للجهاز في معرض PRO TECK.
+نود المتابعة معكم بشأن طلب الشراء الأخير للجهاز في معرض PRO TECK.
 هل يناسبكم تأكيد موعد الشحن اليوم، أم ترغبون في الاستفسار عن تفاصيل إضافية من الفني المختص؟
 في خدمتك دائماً!`;
       } else if (type === 'negotiation_summary') {
         result = `💡 تحليل وملخص التفاوض لـ ${customer.fullName}:
-• العميل قدم مقترح خصم بقيمة 5% إلى 10% على الأجهزة المحجوزة.
-• نسبة قبول العروض السابقة: 100% بشرط تقديم عربون حجز فوري عبر InstaPay.
+• العميل قدم مقترح خصم بقيمة 5% إلى 10% على الأجهزة المطلوبة.
+• نسبة قبول العروض السابقة: 100% في حال السداد عبر InstaPay أو بالمعرض.
 • التوصية: الموافقة على الخصم المقترح المقدر بـ 1000 ج.م في حالة سداد باقي المبلغ نقداً عند الاستلام.`;
       } else if (type === 'incomplete_check') {
         const missing = [];
         if (!customer.email) missing.push('البريد الإلكتروني غير مكتمل');
-        if (!customer.address.streetAddress) missing.push('العنوان التفصيلي للشارع غير مكتمل');
+        if (!customer.address?.streetAddress) missing.push('العنوان التفصيلي للشارع غير مكتمل');
 
         result = missing.length > 0
           ? `⚠️ تنبيه البيانات غير المكتملة:\n• ${missing.join('\n• ')}\n\nيرجى استكمال البيانات قبل إصدار فاتورة الشراء بالضمان الذهبي.`

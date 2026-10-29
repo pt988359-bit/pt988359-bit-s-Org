@@ -2,9 +2,7 @@ import React from 'react';
 import { OrderWorkspaceModule, OrderDisplayMode } from '../../../types/orderManagementCenter';
 import {
   ShoppingCart,
-  ShoppingBag,
   CreditCard,
-  TrendingDown,
   MessageSquare,
   CheckCircle2,
   XCircle,
@@ -31,9 +29,8 @@ interface OrderModuleTabsProps {
   counts: {
     unified_requests?: number;
     purchase_requests: number;
-    reservations: number;
     negotiations: number;
-    inquiries: number;
+    inquiries?: number;
     completed_sales: number;
     cancelled: number;
     archived: number;
@@ -58,12 +55,8 @@ export const OrderModuleTabs: React.FC<OrderModuleTabsProps> = ({
   onCreateNewRequest,
 }) => {
   const modules: { id: OrderWorkspaceModule; label: string; icon: React.ReactNode; badge: number }[] = [
-    { id: 'unified_requests', label: 'مركز الطلبات الموحد (Unified)', icon: <ShieldCheck className="w-4 h-4 text-emerald-400" />, badge: counts.unified_requests || (counts.purchase_requests + counts.reservations + counts.negotiations + counts.inquiries) },
+    { id: 'unified_requests', label: 'مركز الطلبات الموحد (Unified)', icon: <ShieldCheck className="w-4 h-4 text-emerald-400" />, badge: counts.unified_requests || (counts.purchase_requests + counts.negotiations) },
     { id: 'purchase_requests', label: 'طلبات الشراء', icon: <ShoppingCart className="w-4 h-4" />, badge: counts.purchase_requests },
-    { id: 'reservations', label: 'الحجوزات (24 ساعة)', icon: <ShoppingBag className="w-4 h-4" />, badge: counts.reservations },
-    { id: 'negotiations', label: 'المفاوضات والخصم', icon: <TrendingDown className="w-4 h-4" />, badge: counts.negotiations },
-
-    { id: 'inquiries', label: 'استفسارات المنتجات', icon: <MessageSquare className="w-4 h-4" />, badge: counts.inquiries },
     { id: 'completed_sales', label: 'المبيعات المكتملة', icon: <CheckCircle2 className="w-4 h-4" />, badge: counts.completed_sales },
     { id: 'cancelled', label: 'الملغاة والمرفوضة', icon: <XCircle className="w-4 h-4" />, badge: counts.cancelled },
     { id: 'archived', label: 'المؤرشفة', icon: <Archive className="w-4 h-4" />, badge: counts.archived },

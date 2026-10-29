@@ -5,7 +5,7 @@ import { ChevronDown, HelpCircle } from 'lucide-react';
 interface FaqItem {
   question: string;
   answer: string;
-  category: 'warranties' | 'reservations' | 'delivery' | 'trade';
+  category: 'warranties' | 'purchases' | 'delivery' | 'trade';
 }
 
 const FAQ_ITEMS: FaqItem[] = [
@@ -20,14 +20,14 @@ const FAQ_ITEMS: FaqItem[] = [
     answer: 'في حالة ظهور أي عيب فني، نرسل فني متخصص من المعرض لفحص الجهاز وصيانته مجاناً، أو استبدال الجهاز بجهاز آخر مماثل في حالة عدم إمكانية الإصلاح.',
   },
   {
-    category: 'reservations',
-    question: 'كيف يعمل نظام الحجز المجاني المباشر؟',
-    answer: 'يمكنك إدخال اسمك ورقم الواتساب وساعة الزيارة المفضلين لحجز أي جهاز مجاناً وبدون أي دفع أونلاين. يتم إخفاء الجهاز فوراً من الموقع وبدء عد تنازلي لمدة 24 ساعة لزيارة المعرض والمعاينة على الطبيعة.',
+    category: 'purchases',
+    question: 'كيف يمكنني طلب شراء جهاز ومعاينته؟',
+    answer: 'يمكنك إرسال طلب شراء مباشرة من صفحة الجهاز عبر إدخال اسمك ورقم هاتفك. يتواصل معك فريقنا لتأكيد كافة التفاصيل وتحديد موعد لزيارة المعرض أو التوصيل.',
   },
   {
-    category: 'reservations',
-    question: 'هل توجد أية رسوم أو عربون لحجز الجهاز؟',
-    answer: 'لا، الحجز مجاني تماماً وبدون أي عربون أو دفع أونلاين. يتم الشراء وسداد القيمة بالكامل بالمعرض بعد المعاينة والتجربة المباشرة.',
+    category: 'purchases',
+    question: 'هل توجد أية مبالغ أو رسوم تدفع أونلاين؟',
+    answer: 'لا، لا يوجد أي دفع أونلاين. يتم الدفع عند الاستلام بعد المعاينة والتجربة المباشرة في المعرض بشارع 68 المعادي أو عند الاستلام.',
   },
   {
     category: 'delivery',
@@ -57,10 +57,10 @@ export const FaqPage: React.FC = () => {
           الأسئلة الشائعة
         </span>
         <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white">
-          كل ما تحتاج معرفته عن الشراء والحجز والضمان
+          كل ما تحتاج معرفته عن الشراء والضمان والمعاينة
         </h1>
         <p className="text-slate-600 dark:text-slate-400 text-sm">
-          إجابات شاملة ومباشرة على استفسارات عملائنا حول الحجز المجاني لـ 24 ساعة والمعاينة بفرع المعادي.
+          إجابات شاملة ومباشرة على استفسارات عملائنا حول طلبات الشراء والمعاينة والضمان بفرع المعادي.
         </p>
       </div>
 
@@ -69,7 +69,7 @@ export const FaqPage: React.FC = () => {
         {[
           { id: 'all', label: 'الكل' },
           { id: 'warranties', label: 'الضمان والصيانة' },
-          { id: 'reservations', label: 'الحجز المجاني (24 ساعة)' },
+          { id: 'purchases', label: 'طلبات الشراء والمعاينة' },
           { id: 'delivery', label: 'التوصيل والشركات' },
           { id: 'trade', label: 'الاستبدال والبيع' },
         ].map((tab) => (

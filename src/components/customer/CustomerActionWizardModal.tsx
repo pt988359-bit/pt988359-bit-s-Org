@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Product } from '../../types';
 import { BUSINESS_CONFIG } from '../../config/businessConfig';
-import { CustomerActionType, ReservationDurationOption, CustomerDocument } from '../../types/customerActions';
+import { CustomerActionType, CustomerDocument } from '../../types/customerActions';
 import { useShowroom } from '../../context/ShowroomContext';
 import { useToast } from '../../context/ToastContext';
 import { useCustomerAuth } from '../../context/CustomerAuthContext';
-import { ReservationService } from '../../core/services/ReservationService';
 import { WhatsAppMessageBuilder } from '../../core/services/WhatsAppMessageBuilder';
 import { NotificationService } from '../../core/services/NotificationService';
 import { defaultRequestRepository } from '../../core/repositories/RequestRepository';
@@ -16,9 +15,7 @@ import { validateEgyptianPhone, formatPhoneForDisplay } from '../../utils/phoneU
 import {
   generateReferenceNumber,
   savePurchaseRequest,
-  saveReservationRequest,
   saveNegotiationRequest,
-  saveInquiryRequest,
 } from '../../utils/customerStorage';
 
 import { PrintableReceiptModal } from './PrintableReceiptModal';
@@ -57,7 +54,7 @@ export const CustomerActionWizardModal: React.FC<CustomerActionWizardModalProps>
   actionType,
   onClose,
 }) => {
-  const { settings, submitTradeRequest, updateProduct, createReservation } = useShowroom();
+  const { settings, submitTradeRequest, updateProduct } = useShowroom();
   const { showToast } = useToast();
   const { customer, isCustomerAuthenticated, openLoginModal } = useCustomerAuth();
 
@@ -80,10 +77,6 @@ export const CustomerActionWizardModal: React.FC<CustomerActionWizardModalProps>
       if (customer.email) setCustomerEmail(customer.email);
     }
   }, [customer]);
-
-  // Reservation Specifics
-  const [reservationDuration, setReservationDuration] = useState<ReservationDurationOption>('24h');
-
 
   const [proofImage, setProofImage] = useState<string | null>(null);
   const [paymentNotes, setPaymentNotes] = useState('');
@@ -207,7 +200,7 @@ export const CustomerActionWizardModal: React.FC<CustomerActionWizardModalProps>
       productId: product.id,
       productTitle: product.title,
       productPrice: product.price,
-      productImage: product.images?.[0] || '',
+      productImage: '',
       status: 'pending_approval',
       priority: 'high',
       auditTrail: [
@@ -264,117 +257,6 @@ export const CustomerActionWizardModal: React.FC<CustomerActionWizardModalProps>
     setCurrentStep(3); // Confirmation
   };
 
-  // Action 2: Reservation (strictly 24h Free Reservation, limit 1 per customer)
-  const handleFinalizeReservation = () => {
-    if (!isCustomerInfoValid()) {
-      showToast('خطأ في البيانات', 'يرجى إدخال اسمك ورقم هاتف مصري صحيح', 'error');
-      return;
-    }
-
-    // Check single active reservation rule (PART 10)
-    if (ReservationService.hasActiveReservation(customerPhone)) {
-      showToast('حجز نشط موجود', 'لديك حجز نشط بالفعل. يمكن كل عميل حجز جهاز واحد فقط في نفس الوقت.', 'warning');
-      return;
-    }
-
-    try {
-      // 24 Hours Free Reservation (TASK-002)
-      const resInfo = ReservationService.createFreeReservation({
-        productId: product.id,
-        productTitle: product.title,
-        productPrice: product.price,
-        productImage: product.images?.[0] || '',
-        customerName,
-        customerPhone,
-      });
-
-      setGeneratedRef(resInfo.reservationNumber);
-
-      // Build WhatsApp message
-      const msg = WhatsAppMessageBuilder.buildReservationMessage(
-        { name: customerName, phone: customerPhone, email: customerEmail },
-        { title: product.title, code: product.id, price: product.price },
-        resInfo.reservationNumber
-      );
-      setGeneratedWhatsAppMsg(msg);
-
-      // Clean Architecture Request Repository Record
-      defaultRequestRepository.createRequest({
-        referenceNumber: resInfo.reservationNumber,
-        type: 'reservation',
-        customer: {
-          fullName: customerName,
-          phone: customerPhone,
-          whatsappPhone: customerWhatsapp || customerPhone,
-          email: customerEmail,
-        },
-        productId: product.id,
-        productTitle: product.title,
-        productPrice: product.price,
-        productImage: product.images?.[0] || '',
-        status: 'active',
-        priority: 'urgent',
-        auditTrail: [
-          {
-            timestamp: new Date().toISOString(),
-            status: 'active',
-            note: 'تم تثبيت الحجز المجاني لـ 24 ساعة وحجب الجهاز آلياً',
-            actor: 'Customer',
-          },
-        ],
-      });
-
-      // Send In-App Notification (NotificationService Abstraction)
-      NotificationService.sendNotification({
-        title: 'حجز جهاز جديد 24 ساعة',
-        message: `تم حجب الجهاز ${product.title} لمدة 24 ساعة للعميل ${customerName}`,
-        type: 'success',
-        channel: 'in_app',
-        recipientPhone: customerPhone,
-      });
-
-      const doc = saveReservationRequest({
-        id: resInfo.id,
-        referenceNumber: resInfo.reservationNumber,
-        product: {
-          id: product.id,
-          title: product.title,
-          brand: product.brand,
-          price: product.price,
-          image: product.images?.[0] || '',
-        },
-        customer: {
-          fullName: customerName,
-          phone: customerPhone,
-          whatsappPhone: customerWhatsapp || customerPhone,
-        },
-        duration: '24h',
-        durationHours: 24,
-        status: 'active',
-
-        createdAt: resInfo.reservedAtISO,
-        expiresAt: resInfo.expiresAtISO,
-        auditTrail: [
-          {
-            timestamp: new Date().toISOString(),
-            status: 'active',
-            note: 'تم تثبيت الحجز المجاني لـ 24 ساعة وحجب الجهاز من المعرض',
-            actor: 'Customer',
-          },
-        ],
-      });
-
-      // Update product status to 'reserved' (PART 3: Automatic Product Hold)
-      updateProduct(product.id, { status: 'reserved' });
-
-      setGeneratedDoc(doc);
-      setCurrentStep(3); // Reservation Confirmation Card
-      showToast('تم الحجز بنجاح', 'تم حجز الجهاز لك لمدة 24 ساعة مجاناً وحجبه عن المعرض', 'success');
-    } catch (err: any) {
-      showToast('عفواً', err.message || 'حدث خطأ أثناء إجراء الحجز', 'error');
-    }
-  };
-
 
 
 
@@ -412,7 +294,7 @@ export const CustomerActionWizardModal: React.FC<CustomerActionWizardModalProps>
       productId: product.id,
       productTitle: product.title,
       productPrice: product.price,
-      productImage: product.images?.[0] || '',
+      productImage: '',
       status: 'pending_approval',
       priority: 'medium',
       details: { offeredPrice: offeredPriceNum, notes: negotiationNotes },
@@ -485,70 +367,11 @@ export const CustomerActionWizardModal: React.FC<CustomerActionWizardModalProps>
     );
     setGeneratedWhatsAppMsg(msg);
 
-    defaultRequestRepository.createRequest({
-      referenceNumber: ref,
-      type: 'inquiry',
-      customer: {
-        fullName: customerName,
-        phone: customerPhone,
-        whatsappPhone: customerWhatsapp || customerPhone,
-        email: customerEmail,
-      },
-      productId: product.id,
-      productTitle: product.title,
-      productPrice: product.price,
-      productImage: product.images?.[0] || '',
-      status: 'active',
-      priority: 'medium',
-      details: { question: questionText },
-      auditTrail: [
-        {
-          timestamp: new Date().toISOString(),
-          status: 'active',
-          note: 'استفسار جديد عن الجهاز',
-          actor: 'Customer',
-        },
-      ],
-    });
+    // Open WhatsApp directly for customer interaction
+    WhatsAppMessageBuilder.openWhatsApp(settings.whatsappPhone, msg);
 
-    NotificationService.sendNotification({
-      title: 'استفسار عميل جديد',
-      message: `استفسار عن الجهاز ${product.title} من العميل ${customerName}`,
-      type: 'info',
-      channel: 'in_app',
-      recipientPhone: customerPhone,
-    });
-
-    const doc = saveInquiryRequest({
-      id: 'inq-' + Date.now(),
-      referenceNumber: ref,
-      product: {
-        id: product.id,
-        title: product.title,
-        brand: product.brand,
-        price: product.price,
-        image: product.images?.[0] || '',
-      },
-      customer: {
-        fullName: customerName,
-        phone: customerPhone,
-        whatsappPhone: customerWhatsapp || customerPhone,
-      },
-      question: questionText,
-      status: 'active',
-      createdAt: new Date().toISOString(),
-      auditTrail: [
-        {
-          timestamp: new Date().toISOString(),
-          status: 'active',
-          note: 'تم تحويل الاستفسار المباشر لفريق المعرض',
-          actor: 'Customer',
-        },
-      ],
-    });
-
-    setGeneratedDoc(doc);
-    setCurrentStep(2); // Confirmation & WhatsApp
+    showToast('تم تجهيز الاستفسار', 'تم فتح واتساب للتواصل المباشر مع فريق المعرض', 'success');
+    setCurrentStep(2); // Confirmation & WhatsApp options
   };
 
   // Action 7: Finalize Exchange
@@ -587,7 +410,7 @@ export const CustomerActionWizardModal: React.FC<CustomerActionWizardModalProps>
       productId: product.id,
       productTitle: product.title,
       productPrice: product.price,
-      productImage: product.images?.[0] || '',
+      productImage: '',
       status: 'pending_approval',
       priority: 'high',
       details: {
@@ -642,7 +465,6 @@ export const CustomerActionWizardModal: React.FC<CustomerActionWizardModalProps>
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-2xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
               {effectiveActionType === 'request_purchase' && <ShoppingBag className="w-6 h-6" />}
-              {effectiveActionType === 'reserve' && <Sparkles className="w-6 h-6 text-amber-400" />}
               {effectiveActionType === 'negotiate' && <Tag className="w-6 h-6 text-amber-300" />}
               {effectiveActionType === 'visit_showroom' && <Store className="w-6 h-6 text-blue-400" />}
               {effectiveActionType === 'ask_question' && <HelpCircle className="w-6 h-6 text-purple-400" />}
@@ -652,7 +474,6 @@ export const CustomerActionWizardModal: React.FC<CustomerActionWizardModalProps>
             <div>
               <h3 className="text-lg font-black text-white">
                 {effectiveActionType === 'request_purchase' && 'طلب شراء واستلام من المعرض'}
-                {effectiveActionType === 'reserve' && 'طلب حجز الجهاز (مجاني 24 ساعة)'}
                 {effectiveActionType === 'negotiate' && 'تقديم طلب تفاوض واقتراح سعر'}
                 {effectiveActionType === 'visit_showroom' && 'زيارة ومعاينة الجهاز بالمعرض'}
                 {effectiveActionType === 'ask_question' && 'استفسار فني حول هذا الجهاز'}
@@ -686,11 +507,24 @@ export const CustomerActionWizardModal: React.FC<CustomerActionWizardModalProps>
             {currentStep === 1 && (
               <div className="space-y-4">
                 <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex items-center gap-4">
-                  <img
-                    src={product.images?.[0] || 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=800&q=80'}
-                    alt={product.title}
-                    className="w-20 h-20 rounded-xl object-cover border border-slate-800 shrink-0"
-                  />
+                  {product.images?.[0] ? (
+                    <img
+                      src={product.images[0]}
+                      alt={product.title}
+                      className="w-20 h-20 rounded-xl object-cover border border-slate-800 shrink-0"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                      }}
+                    />
+                  ) : null}
+                  <div
+                    className={`${
+                      product.images?.[0] ? 'hidden ' : ''
+                    }w-20 h-20 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 text-[11px] font-bold text-center shrink-0 p-1 select-none`}
+                  >
+                    لا توجد صورة
+                  </div>
                   <div className="space-y-1">
                     <span className="text-[10px] text-blue-400 font-bold block">{product.brand}</span>
                     <h4 className="text-sm font-bold text-white leading-snug">{product.title}</h4>
@@ -784,116 +618,6 @@ export const CustomerActionWizardModal: React.FC<CustomerActionWizardModalProps>
                     يرجى زيارة المعرض بفرع المعادي لمراجعة الجهاز وتجربته بالكامل قبل سداد المبلغ النهائي.
                   </p>
                 </div>
-
-                {renderTwoFinalOptionsButtons()}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ========================================== */}
-        {/* ACTION 2: FREE 24-HOUR RESERVATION ENGINE  */}
-        {/* ========================================== */}
-        {actionType === 'reserve' && (
-          <div className="space-y-5">
-            <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 border-b border-slate-800/80 pb-3">
-              <span className={currentStep === 1 ? 'text-blue-400' : ''}>1. ملخص الجهاز</span>
-              <span className={currentStep === 2 ? 'text-blue-400' : ''}>2. بيانات الحجز المجاني</span>
-              <span className={currentStep === 3 ? 'text-emerald-400' : ''}>3. وثيقة الحجز</span>
-            </div>
-
-            {/* Step 1: Summary */}
-            {currentStep === 1 && (
-              <div className="space-y-4">
-                <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex items-center gap-4">
-                  <img
-                    src={product.images?.[0] || 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=800&q=80'}
-                    alt={product.title}
-                    className="w-20 h-20 rounded-xl object-cover border border-slate-800 shrink-0"
-                  />
-                  <div>
-                    <span className="text-[10px] text-blue-400 font-bold block">{product.brand}</span>
-                    <h4 className="text-sm font-bold text-white">{product.title}</h4>
-                    <span className="text-base font-black text-emerald-400 font-mono block mt-1">
-                      {product.price.toLocaleString()} {settings.currencySymbol}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-blue-950/40 border border-blue-500/20 text-blue-300 text-xs leading-relaxed flex items-start gap-2.5">
-                  <ShieldCheck className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-                  <span>
-                    نظام الحجز المعتمد لدى PRO TECK مجاني بالكامل لمدة 24 ساعة. يتم حجب الجهاز فوراً من المعرض لحين حضورك للمعاينة والإتمام.
-                  </span>
-                </div>
-
-                <Button variant="electric" className="w-full" onClick={() => setCurrentStep(2)}>
-                  متابعة لإدخال البيانات وتثبيت الحجز
-                </Button>
-              </div>
-            )}
-
-            {/* Step 2: Customer Info & 24h Rule */}
-            {currentStep === 2 && (
-              <div className="space-y-4">
-                <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between text-xs">
-                  <span className="text-slate-400">مدة الحجز المعيارية:</span>
-                  <span className="text-emerald-400 font-bold bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
-                    24 ساعة مجاناً
-                  </span>
-                </div>
-
-                <Input
-                  label="الاسم بالكامل *"
-                  placeholder="أحمد محمود"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  required
-                />
-
-                <Input
-                  label="رقم الهاتف للتواصل *"
-                  placeholder="010xxxxxxx"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  required
-                />
-
-                <div className="p-3 rounded-xl bg-amber-950/30 border border-amber-500/20 text-amber-300 text-[11px] leading-relaxed flex items-start gap-2">
-                  <Clock className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
-                  <span>
-                    ملاحظة هامة: يُسمح للعميل بحجز جهاز واحد فقط في نفس الوقت. ينتهي الحجز تلقائياً بعد 24 ساعة ويعود الجهاز للمعرض ما لم يتم إتمام الشراء.
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-3 pt-2">
-                  <Button variant="outline" onClick={() => setCurrentStep(1)}>
-                    السابق
-                  </Button>
-                  <Button variant="electric" className="flex-1" onClick={handleFinalizeReservation}>
-                    تأكيد الحجز وحجب الجهاز لمدة 24 ساعة
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Step 3: Final Confirmation Card */}
-            {currentStep === 3 && (
-              <div className="text-center space-y-5 py-2">
-                <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center mx-auto">
-                  <CheckCircle2 className="w-8 h-8" />
-                </div>
-
-                <div>
-                  <span className="text-xs text-slate-400 block font-bold">تم تثبيت الحجز وحجب الجهاز بنجاح:</span>
-                  <span className="text-xl font-black text-amber-400 font-mono bg-amber-500/10 px-4 py-1 rounded-full border border-amber-500/20 inline-block mt-2">
-                    {generatedRef}
-                  </span>
-                </div>
-
-                <p className="text-xs text-slate-300 leading-relaxed max-w-sm mx-auto bg-slate-950 p-3 rounded-xl border border-slate-800">
-                  تم حجب الجهاز من العرض العام لمدة 24 ساعة. يمكنك زيارة الفرع للمعاينة والاستلام.
-                </p>
 
                 {renderTwoFinalOptionsButtons()}
               </div>

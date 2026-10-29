@@ -43,7 +43,7 @@ export const ProductImage: React.FC<ProductImageProps> = ({
         </div>
         {showNoImageText && (
           <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
-            لا توجد صور متاحة
+            لا توجد صورة متاحة
           </span>
         )}
       </div>

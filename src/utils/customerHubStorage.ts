@@ -5,7 +5,12 @@ import {
   CustomerFilterOptions,
   DuplicateMatchGroup,
 } from '../types/customerHub';
-import { defaultStorageAdapter } from '../core/storage/LocalStorageAdapter';
+import { firestoreStorageAdapter } from '../core/storage/FirestoreStorageAdapter';
+import {
+  defaultCustomerRepository,
+  defaultCustomerSellRequestRepository,
+  defaultCustomerExchangeRequestRepository,
+} from '../core/repositories/CustomerRepository';
 import { LoggerService } from '../core/services/LoggerService';
 
 const STORAGE_KEY = 'proteck_customer_hub_customers_v1';
@@ -18,12 +23,48 @@ export const INITIAL_SELL_REQUESTS: SellDeviceRequest[] = [];
 
 export const INITIAL_EXCHANGE_REQUESTS: ExchangeDeviceRequest[] = [];
 
-// Local Storage Helper Functions
+// Storage & Repository Helper Functions
+export function normalizeCustomerRecord(cust: any): Customer {
+  if (!cust) return cust;
+  return {
+    ...cust,
+    id: cust.id || `CUST-${Math.floor(1000 + Math.random() * 9000)}`,
+    fullName: cust.fullName || cust.name || 'عميل PRO TECK',
+    primaryPhone: cust.primaryPhone || cust.phone || '',
+    whatsappPhone: cust.whatsappPhone || cust.phone || '',
+    email: cust.email || '',
+    address: {
+      governorate: cust.address?.governorate || '',
+      cityArea: cust.address?.cityArea || '',
+      streetAddress: cust.address?.streetAddress || '',
+    },
+    preferredContactMethod: cust.preferredContactMethod || 'whatsapp',
+    status: cust.status || 'active',
+    tags: Array.isArray(cust.tags) ? cust.tags : [],
+    firstContactDate: cust.firstContactDate || new Date().toISOString(),
+    lastActivityDate: cust.lastActivityDate || new Date().toISOString(),
+    totalRequests: typeof cust.totalRequests === 'number' ? cust.totalRequests : 0,
+    totalPurchases: typeof cust.totalPurchases === 'number' ? cust.totalPurchases : 0,
+    totalSpent: typeof cust.totalSpent === 'number' ? cust.totalSpent : 0,
+    assignedAdmin: cust.assignedAdmin || 'PRO TECK Admin',
+    isArchived: Boolean(cust.isArchived),
+    notes: Array.isArray(cust.notes) ? cust.notes : [],
+    communicationLogs: Array.isArray(cust.communicationLogs) ? cust.communicationLogs : [],
+    timeline: Array.isArray(cust.timeline) ? cust.timeline : [],
+    documents: Array.isArray(cust.documents) ? cust.documents : [],
+    visitedProducts: Array.isArray(cust.visitedProducts) ? cust.visitedProducts : [],
+  };
+}
+
 export function getStoredCustomers(): Customer[] {
   try {
-    const parsed = defaultStorageAdapter.getItem<Customer[]>(STORAGE_KEY);
+    const repoItems = defaultCustomerRepository.getAll();
+    if (repoItems && repoItems.length > 0) {
+      return repoItems.map(normalizeCustomerRecord);
+    }
+    const parsed = firestoreStorageAdapter.getItem<Customer[]>(STORAGE_KEY);
     if (!parsed) return INITIAL_CUSTOMERS;
-    return Array.isArray(parsed) ? parsed : INITIAL_CUSTOMERS;
+    return Array.isArray(parsed) ? parsed.map(normalizeCustomerRecord) : INITIAL_CUSTOMERS;
   } catch (err) {
     LoggerService.error('customerHubStorage', 'Error loading stored customers:', err);
     return INITIAL_CUSTOMERS;
@@ -32,7 +73,8 @@ export function getStoredCustomers(): Customer[] {
 
 export function saveCustomers(customers: Customer[]): void {
   try {
-    defaultStorageAdapter.setItem(STORAGE_KEY, customers);
+    firestoreStorageAdapter.setItem(STORAGE_KEY, customers);
+    defaultCustomerRepository.saveAll(customers);
   } catch (err) {
     LoggerService.error('customerHubStorage', 'Error saving customers:', err);
   }
@@ -40,7 +82,9 @@ export function saveCustomers(customers: Customer[]): void {
 
 export function getStoredSellRequests(): SellDeviceRequest[] {
   try {
-    const parsed = defaultStorageAdapter.getItem<SellDeviceRequest[]>(SELL_REQUESTS_KEY);
+    const repoItems = defaultCustomerSellRequestRepository.getAll();
+    if (repoItems && repoItems.length > 0) return repoItems;
+    const parsed = firestoreStorageAdapter.getItem<SellDeviceRequest[]>(SELL_REQUESTS_KEY);
     if (!parsed) return INITIAL_SELL_REQUESTS;
     return Array.isArray(parsed) ? parsed : INITIAL_SELL_REQUESTS;
   } catch {
@@ -50,7 +94,8 @@ export function getStoredSellRequests(): SellDeviceRequest[] {
 
 export function saveSellRequests(requests: SellDeviceRequest[]): void {
   try {
-    defaultStorageAdapter.setItem(SELL_REQUESTS_KEY, requests);
+    firestoreStorageAdapter.setItem(SELL_REQUESTS_KEY, requests);
+    defaultCustomerSellRequestRepository.saveAll(requests);
   } catch (err) {
     LoggerService.error('customerHubStorage', 'Error saving sell requests:', err);
   }
@@ -58,7 +103,9 @@ export function saveSellRequests(requests: SellDeviceRequest[]): void {
 
 export function getStoredExchangeRequests(): ExchangeDeviceRequest[] {
   try {
-    const parsed = defaultStorageAdapter.getItem<ExchangeDeviceRequest[]>(EXCHANGE_REQUESTS_KEY);
+    const repoItems = defaultCustomerExchangeRequestRepository.getAll();
+    if (repoItems && repoItems.length > 0) return repoItems;
+    const parsed = firestoreStorageAdapter.getItem<ExchangeDeviceRequest[]>(EXCHANGE_REQUESTS_KEY);
     if (!parsed) return INITIAL_EXCHANGE_REQUESTS;
     return Array.isArray(parsed) ? parsed : INITIAL_EXCHANGE_REQUESTS;
   } catch {
@@ -68,7 +115,8 @@ export function getStoredExchangeRequests(): ExchangeDeviceRequest[] {
 
 export function saveExchangeRequests(requests: ExchangeDeviceRequest[]): void {
   try {
-    defaultStorageAdapter.setItem(EXCHANGE_REQUESTS_KEY, requests);
+    firestoreStorageAdapter.setItem(EXCHANGE_REQUESTS_KEY, requests);
+    defaultCustomerExchangeRequestRepository.saveAll(requests);
   } catch (err) {
     LoggerService.error('customerHubStorage', 'Error saving exchange requests:', err);
   }
@@ -95,7 +143,7 @@ export function filterCustomers(
       const matchWa = cust.whatsappPhone.includes(q);
       const matchId = cust.id.toLowerCase().includes(q);
       const matchEmail = cust.email.toLowerCase().includes(q);
-      const matchArea = cust.address.cityArea.toLowerCase().includes(q);
+      const matchArea = (cust.address?.cityArea || '').toLowerCase().includes(q) || (cust.address?.governorate || '').toLowerCase().includes(q);
 
       if (!matchName && !matchPhone && !matchWa && !matchId && !matchEmail && !matchArea) {
         return false;
@@ -108,7 +156,7 @@ export function filterCustomers(
     }
 
     // Area filter
-    if (filters.area !== 'all' && !cust.address.cityArea.includes(filters.area)) {
+    if (filters.area !== 'all' && !(cust.address?.cityArea || '').includes(filters.area)) {
       return false;
     }
 
@@ -119,11 +167,6 @@ export function filterCustomers(
 
     // Has Purchases Only
     if (filters.hasPurchasesOnly && cust.totalPurchases <= 0) {
-      return false;
-    }
-
-    // Has Reservations Only
-    if (filters.hasReservationsOnly && cust.totalReservations <= 0) {
       return false;
     }
 
@@ -200,7 +243,6 @@ export function exportCustomersToCSV(customers: Customer[]): void {
     'آخر نشاط',
     'إجمالي الطلبات',
     'إجمالي الشراء',
-    'إجمالي الحجوزات',
     'إجمالي الإنفاق (ج.م)',
   ];
 
@@ -210,13 +252,12 @@ export function exportCustomersToCSV(customers: Customer[]): void {
     c.primaryPhone,
     c.whatsappPhone,
     c.email,
-    `"${c.address.cityArea} - ${c.address.governorate}"`,
+    `"${c.address?.cityArea || 'غير محدد'}${c.address?.governorate ? ` - ${c.address.governorate}` : ''}"`,
     c.status,
     c.firstContactDate.split('T')[0],
     c.lastActivityDate.split('T')[0],
     c.totalRequests,
     c.totalPurchases,
-    c.totalReservations,
     c.totalSpent,
   ]);
 

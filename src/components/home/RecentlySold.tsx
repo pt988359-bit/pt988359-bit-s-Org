@@ -1,6 +1,7 @@
 import React from 'react';
 import { CheckCircle2, Lock } from 'lucide-react';
 import { useShowroom } from '../../context/ShowroomContext';
+import { DEFAULT_PRODUCT_PLACEHOLDER } from '../../constants/placeholders';
 
 export const RecentlySold: React.FC = () => {
   const { products } = useShowroom();
@@ -48,8 +49,11 @@ export const RecentlySold: React.FC = () => {
             {/* Product Image */}
             <div className="relative w-full h-44 bg-white dark:bg-slate-950 rounded-2xl overflow-hidden mb-4 flex items-center justify-center p-4 grayscale group-hover:grayscale-0 transition-all">
               <img
-                src={product.images?.[0] || 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=800&q=80'}
+                src={product.images?.[0] || DEFAULT_PRODUCT_PLACEHOLDER}
                 alt={product.title}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = DEFAULT_PRODUCT_PLACEHOLDER;
+                }}
                 className="max-h-36 object-contain"
               />
               <div className="absolute inset-0 bg-slate-900/10 flex items-center justify-center">

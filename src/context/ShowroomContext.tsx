@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { doc, onSnapshot, setDoc, collection, getDocs } from 'firebase/firestore';
-import { db } from '../firebase/firestore';
+import { db, setDocData } from '../firebase/firestore';
 import { firestoreHealthManager } from '../firebase/FirestoreHealthManager';
 import { FIRESTORE_COLLECTIONS } from '../core/config/FirestoreConfig';
 import { supabase } from '../supabase/client';
@@ -31,8 +31,11 @@ import {
   deleteEnrichedProductFromFirestore,
   normalizeLifecycleState,
 } from '../utils/productStudioStorage';
-import { getReservations as getOrderStorageReservations, saveReservations as saveOrderStorageReservations } from '../utils/orderManagementStorage';
 import { defaultBrandRepository } from '../core/repositories/BrandRepository';
+import { defaultCategoryRepository } from '../core/repositories/CategoryRepository';
+import { defaultRequestRepository, UnifiedCustomerRequest } from '../core/repositories/RequestRepository';
+import { defaultSellRequestRepository } from '../core/repositories/SellRequestRepository';
+import { firestoreStorageAdapter } from '../core/storage/FirestoreStorageAdapter';
 import {
   INITIAL_SETTINGS,
   INITIAL_CATEGORIES,
@@ -47,7 +50,6 @@ import {
 import { getSpecTemplateForCategory } from '../engine/specTemplates';
 import { defaultSequenceService } from '../core/services/SequenceService';
 import { IdGenerator } from '../core/services/IdGenerator';
-import { ReservationExpirationService } from '../core/services/ReservationExpirationService';
 import {
   searchProducts,
   ProductSearchFilters,
@@ -85,7 +87,6 @@ export type RoutePath =
   | 'admin-dashboard'
   | 'admin-products'
   | 'admin-categories'
-  | 'admin-reservations'
   | 'admin-orders'
   | 'admin-payments'
   | 'admin-invoices'
@@ -103,6 +104,8 @@ interface ShowroomContextType {
   navigateTo: (route: RoutePath, params?: { productId?: string; categoryId?: string; filterCondition?: ProductCondition }) => void;
   selectedProductId: string | null;
   selectedCategoryId: string | null;
+  setSelectedCategoryId: (id: string | null) => void;
+  setSelectedCategory: (id: string | null) => void;
 
   // Filter States
   searchQuery: string;
@@ -126,7 +129,7 @@ interface ShowroomContextType {
   activeBrands: Brand[];
   addBrand: (brand: Omit<Brand, 'id'>) => void;
   updateBrand: (id: string, updated: Partial<Brand>) => void;
-  deleteBrand: (id: string) => void;
+  deleteBrand: (id: string) => Promise<void>;
   toggleBrand: (id: string) => void;
 
   products: EnrichedProduct[];
@@ -137,22 +140,21 @@ interface ShowroomContextType {
   deleteProduct: (id: string) => void;
   getProductById: (id: string) => EnrichedProduct | undefined;
   updateProductFields: (productId: string, updates: Partial<EnrichedProduct>) => void;
-  updateProductStatus: (id: string, status: ProductStatus) => void;
+  updateProductStatus: (id: string, status: ProductStatus, finalPrice?: number) => void;
   reserveProduct: (productId: string, reservedBy?: string, reservedUntil?: string) => void;
   cancelReservation: (reservationIdOrProductId: string) => void;
   confirmSale: (productId: string) => void;
   togglePublish: (productId: string, isPublished: boolean) => void;
 
   reservations: Reservation[];
-  createReservation: (data: Omit<Reservation, 'id' | 'reservationNumber' | 'createdAt' | 'status'>) => Reservation;
   updateReservationStatus: (id: string, status: Reservation['status']) => void;
 
   orders: Order[];
-  createOrder: (order: Omit<Order, 'id' | 'orderNumber' | 'createdAt'>) => Order;
+  createOrder: (order: Omit<Order, 'id' | 'orderNumber' | 'createdAt'>) => Promise<Order>;
   updateOrderStatus: (id: string, status: Order['status']) => void;
 
   invoices: Invoice[];
-  createInvoice: (invoice: Omit<Invoice, 'id' | 'invoiceNumber'>) => Invoice;
+  createInvoice: (invoice: Omit<Invoice, 'id' | 'invoiceNumber'>) => Promise<Invoice>;
 
   tradeRequests: TradeRequest[];
   submitTradeRequest: (req: Omit<TradeRequest, 'id' | 'createdAt' | 'status'> & Partial<TradeRequest>) => TradeRequest;
@@ -161,6 +163,9 @@ interface ShowroomContextType {
   sellRequests: SellRequest[];
   submitSellRequest: (req: Omit<SellRequest, 'id' | 'createdAt' | 'status'> & Partial<SellRequest>) => SellRequest;
   updateSellRequestStatus: (id: string, status: SellRequest['status']) => void;
+
+  customerRequests: UnifiedCustomerRequest[];
+  refreshCustomerRequests: () => Promise<UnifiedCustomerRequest[]>;
 
   analytics: AnalyticsSummary;
   aiConfig: AiConfig;
@@ -201,7 +206,6 @@ const getInitialRoute = (): RoutePath => {
     if (url.includes('/admin/login') || url.includes('admin/login')) return 'admin-login';
     if (url.includes('/admin/products') || url.includes('admin/products') || url.includes('product-studio')) return 'admin-products';
     if (url.includes('/admin/categories') || url.includes('admin/categories')) return 'admin-categories';
-    if (url.includes('/admin/reservations') || url.includes('admin/reservations')) return 'admin-reservations';
     if (url.includes('/admin/orders') || url.includes('admin/orders')) return 'admin-orders';
     if (url.includes('/admin/payments') || url.includes('admin/payments')) return 'admin-payments';
     if (url.includes('/admin/invoices') || url.includes('admin/invoices')) return 'admin-invoices';
@@ -219,6 +223,7 @@ const getInitialRoute = (): RoutePath => {
     return 'my-activity';
   }
 
+  if (path.includes('/product-detail') || hash.includes('product-detail')) return 'product-detail';
   if (path.includes('/sell') || hash.includes('sell')) return 'sell';
   if (path.includes('/products') || hash.includes('products')) return 'products';
   if (path.includes('/categories') || hash.includes('categories')) return 'categories';
@@ -232,7 +237,7 @@ const getInitialRoute = (): RoutePath => {
   return 'home';
 };
 
-const getUrlPathForRoute = (route: RoutePath): string => {
+const getUrlPathForRoute = (route: RoutePath, productId?: string): string => {
   if (route.startsWith('admin')) {
     switch (route) {
       case 'admin':
@@ -244,8 +249,6 @@ const getUrlPathForRoute = (route: RoutePath): string => {
         return '/admin/products';
       case 'admin-categories':
         return '/admin/categories';
-      case 'admin-reservations':
-        return '/admin/reservations';
       case 'admin-orders':
         return '/admin/orders';
       case 'admin-payments':
@@ -270,6 +273,9 @@ const getUrlPathForRoute = (route: RoutePath): string => {
         return '/admin/dashboard';
     }
   }
+  if (route === 'product-detail' && productId) {
+    return `/product-detail/${productId}`;
+  }
   return route === 'home' ? '/' : `/${route}`;
 };
 
@@ -278,7 +284,11 @@ const ShowroomContext = createContext<ShowroomContextType | undefined>(undefined
 export const ShowroomProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Navigation State
   const [currentRoute, setCurrentRoute] = useState<RoutePath>(getInitialRoute);
-  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    const match = window.location.pathname.match(/\/product-detail\/([^/?#]+)/i) || window.location.hash.match(/product-detail\/([^/?#]+)/i);
+    return match && match[1] ? decodeURIComponent(match[1]) : null;
+  });
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
   // Filters State
@@ -288,7 +298,13 @@ export const ShowroomProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Domain Collections
   const [settings, setSettings] = useState<ShowroomSettings>(INITIAL_SETTINGS);
-  const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
+  const [categories, setCategories] = useState<Category[]>(() => {
+    const existing = defaultCategoryRepository.getAll();
+    if (existing && existing.length > 0) {
+      return existing;
+    }
+    return INITIAL_CATEGORIES;
+  });
   const [brands, setBrands] = useState<Brand[]>(() => defaultBrandRepository.getAll());
   const [products, setProducts] = useState<EnrichedProduct[]>(() => getStoredEnrichedProducts());
   const [isLoadingProducts, setIsLoadingProducts] = useState<boolean>(true);
@@ -296,7 +312,12 @@ export const ShowroomProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
   const [invoices, setInvoices] = useState<Invoice[]>(INITIAL_INVOICES);
   const [tradeRequests, setTradeRequests] = useState<TradeRequest[]>(INITIAL_TRADE_REQUESTS);
-  const [sellRequests, setSellRequests] = useState<SellRequest[]>(INITIAL_SELL_REQUESTS);
+  const [sellRequests, setSellRequests] = useState<SellRequest[]>(() =>
+    defaultSellRequestRepository.getAll()
+  );
+  const [customerRequests, setCustomerRequests] = useState<UnifiedCustomerRequest[]>(() =>
+    defaultRequestRepository.getAll()
+  );
   const [analytics] = useState<AnalyticsSummary>(INITIAL_ANALYTICS);
   const [aiConfig, setAiConfig] = useState<AiConfig>(INITIAL_AI_CONFIG);
 
@@ -334,19 +355,16 @@ export const ShowroomProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
-  // Start reservation expiration scheduler (TASK-002: Automatic Expiration)
-  useEffect(() => {
-    ReservationExpirationService.startScheduler(10000);
-    return () => {
-      ReservationExpirationService.stopScheduler();
-    };
-  }, []);
 
   // Listen for popstate URL changes
   useEffect(() => {
     const handlePopState = () => {
       const route = getInitialRoute();
       setCurrentRoute(route);
+      const match = window.location.pathname.match(/\/product-detail\/([^/?#]+)/i) || window.location.hash.match(/product-detail\/([^/?#]+)/i);
+      if (match && match[1]) {
+        setSelectedProductId(decodeURIComponent(match[1]));
+      }
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -372,7 +390,7 @@ export const ShowroomProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setConditionFilter('all');
     }
 
-    const targetPath = getUrlPathForRoute(route);
+    const targetPath = getUrlPathForRoute(route, params?.productId);
     if (window.location.pathname !== targetPath && window.history?.pushState) {
       window.history.pushState({}, '', targetPath);
     }
@@ -428,7 +446,17 @@ export const ShowroomProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const matchesCategory =
         !selectedCategoryId || selectedCategoryId === 'all' || item.categoryId === selectedCategoryId;
 
-      const matchesCondition = conditionFilter === 'all' || item.condition === conditionFilter;
+      const matchesCondition = (() => {
+        if (conditionFilter === 'all') return true;
+        if (conditionFilter === 'new') return item.condition === 'new' || (item.condition as any) === 'new_in_box';
+        if (conditionFilter === 'used_warranty') {
+          return item.condition === 'used_warranty' || item.condition === 'refurbished';
+        }
+        if (conditionFilter === 'used_no_warranty') {
+          return item.condition === 'used_no_warranty' || item.condition === 'used';
+        }
+        return item.condition === conditionFilter;
+      })();
 
       const matchesStatus = isAdminView
         ? statusFilter === 'all' || item.status === statusFilter
@@ -621,6 +649,101 @@ export const ShowroomProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
   }, []);
 
+  // Real-time Firestore Sync for Categories, Customer Requests, Reservations, Orders, and Completed Sales
+  useEffect(() => {
+    // 0. Live real-time listener for Categories
+    const unsubCategories = defaultCategoryRepository.subscribe((items) => {
+      if (Array.isArray(items) && items.length > 0) {
+        setCategories(items);
+      }
+    });
+
+    // Proactive initial fetch to guarantee remote freshness on mount & seed if empty
+    defaultCategoryRepository
+      .fetchLive()
+      .then((items) => {
+        if (Array.isArray(items) && items.length > 0) {
+          setCategories(items);
+        } else {
+          // If remote collection is completely empty, seed INITIAL_CATEGORIES
+          const current = defaultCategoryRepository.getAll();
+          if (!current || current.length === 0) {
+            defaultCategoryRepository.saveAll(INITIAL_CATEGORIES);
+            setCategories(INITIAL_CATEGORIES);
+          }
+        }
+      })
+      .catch(() => {});
+
+    // 1. Live real-time listener for Customer Requests
+    const unsubRequests = defaultRequestRepository.subscribe((items) => {
+      if (Array.isArray(items)) {
+        setCustomerRequests(items);
+      }
+    });
+
+    // Proactive initial fetch to guarantee remote freshness on mount
+    defaultRequestRepository
+      .fetchLive()
+      .then((items) => {
+        if (Array.isArray(items) && items.length > 0) {
+          setCustomerRequests(items);
+        }
+      })
+      .catch(() => {});
+
+    // Live real-time listener for Sell Requests
+    const unsubSellRequests = defaultSellRequestRepository.subscribe((items) => {
+      if (Array.isArray(items)) {
+        setSellRequests(items);
+      }
+    });
+
+    defaultSellRequestRepository
+      .fetchLive()
+      .then((items) => {
+        if (Array.isArray(items) && items.length > 0) {
+          setSellRequests(items);
+        }
+      })
+      .catch(() => {});
+
+    // 2. Live listener for Reservations
+    const unsubReservations = firestoreStorageAdapter.subscribeToCollectionUpdates<Reservation>(
+      FIRESTORE_COLLECTIONS.RESERVATIONS,
+      (items) => {
+        if (Array.isArray(items) && items.length > 0) {
+          setReservations(items);
+        }
+      }
+    );
+
+    // 3. Live listener for Orders
+    const unsubOrders = firestoreStorageAdapter.subscribeToCollectionUpdates<Order>(
+      FIRESTORE_COLLECTIONS.ORDERS,
+      (items) => {
+        if (Array.isArray(items) && items.length > 0) {
+          setOrders(items);
+        }
+      }
+    );
+
+    // 4. Live listener for Completed Sales
+    const unsubCompletedSales = firestoreStorageAdapter.subscribeToCollectionUpdates<any>(
+      FIRESTORE_COLLECTIONS.COMPLETED_SALES,
+      () => {}
+    );
+
+    return () => {
+      unsubCategories();
+      unsubRequests();
+      unsubSellRequests();
+      unsubReservations();
+      unsubOrders();
+      unsubCompletedSales();
+    };
+  }, []);
+
   // Actions
   const updateSettings = (newSettings: Partial<ShowroomSettings>) => {
     setSettings((prev) => {
@@ -656,14 +779,17 @@ export const ShowroomProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       id: 'cat-' + Date.now(),
       count: 0,
     };
+    defaultCategoryRepository.save(newCat);
     setCategories((prev) => [...prev, newCat]);
   };
 
   const updateCategory = (id: string, updated: Partial<Category>) => {
+    defaultCategoryRepository.update(id, updated);
     setCategories((prev) => prev.map((c) => (c.id === id ? { ...c, ...updated } : c)));
   };
 
   const deleteCategory = (id: string) => {
+    defaultCategoryRepository.delete(id);
     setCategories((prev) => prev.filter((c) => c.id !== id));
   };
 
@@ -686,9 +812,13 @@ export const ShowroomProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setBrands((prev) => prev.map((b) => (b.id === id ? { ...b, ...updated } : b)));
   };
 
-  const deleteBrand = (id: string) => {
-    defaultBrandRepository.delete(id);
-    setBrands((prev) => prev.filter((b) => b.id !== id));
+  const deleteBrand = async (id: string) => {
+    try {
+      await defaultBrandRepository.delete(id);
+      setBrands((prev) => prev.filter((b) => b.id !== id));
+    } catch (error: any) {
+      alert(`فشل حذف الماركة: ${error?.message || 'خطأ غير معروف'}`);
+    }
   };
 
   const toggleBrand = (id: string) => {
@@ -740,7 +870,6 @@ export const ShowroomProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           action: 'إنشاء الجهاز بالمنتجات',
         },
       ],
-      viewsCount: (prodData as any).viewsCount || 0,
       reservationsCount: (prodData as any).reservationsCount || 0,
       purchaseRequestsCount: (prodData as any).purchaseRequestsCount || 0,
       negotiationsCount: (prodData as any).negotiationsCount || 0,
@@ -809,7 +938,7 @@ export const ShowroomProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
   };
 
-  const updateProductStatus = (id: string, status: ProductStatus) => {
+  const updateProductStatus = (id: string, status: ProductStatus, finalPrice?: number) => {
     const normState = normalizeLifecycleState(status);
     const updates: Partial<EnrichedProduct> = {
       ...normState,
@@ -819,9 +948,30 @@ export const ShowroomProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       updates.isReserved = false;
       updates.reservedBy = null as any;
       updates.reservedUntil = null as any;
+      updates.soldAt = undefined;
+      updates.finalPrice = undefined;
     } else if (normState.status === 'reserved') {
       updates.isReserved = true;
+      updates.soldAt = undefined;
+    } else if (normState.status === 'sold') {
+      updates.soldAt = new Date().toISOString();
+      if (typeof finalPrice === 'number') {
+        updates.finalPrice = finalPrice;
+      }
     }
+
+    setProducts((prev) =>
+      prev.map((p) => {
+        if (p.id !== id) return p;
+        const updated = { ...p, ...updates };
+        if (normState.status === 'available' || normState.status === 'reserved') {
+          delete updated.soldAt;
+          delete updated.finalPrice;
+        }
+        return updated;
+      })
+    );
+
     updateProductFields(id, updates);
   };
 
@@ -908,110 +1058,58 @@ export const ShowroomProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return getSimilarProducts(current, products, priceTolerance, limit);
   };
 
-  const createReservation = (
-    data: Omit<Reservation, 'id' | 'reservationNumber' | 'createdAt' | 'status'>
-  ) => {
-    const phone = (data as any).phone || data.customerPhone || '';
-    const whatsapp = (data as any).whatsapp || data.customerPhone || phone;
-    const email = (data as any).email || data.customerEmail || '';
-
-    const newRes: Reservation = {
-      ...data,
-      id: IdGenerator.generateUniqueId('res'),
-      reservationNumber: defaultSequenceService.generateNextReference('reservation'),
-      customerPhone: data.customerPhone || phone,
-      phone,
-      whatsapp,
-      email,
-      notes: data.notes || '',
-      source: 'website',
-      createdAt: new Date().toISOString(),
-      status: 'pending',
-    };
-
-    setReservations((prev) => [newRes, ...prev]);
-
-    // Save directly to Firestore
-    try {
-      const docRef = doc(db, FIRESTORE_COLLECTIONS.RESERVATIONS, newRes.id);
-      setDoc(docRef, newRes, { merge: true }).catch((err) =>
-        console.error('Firestore save reservation error:', err)
-      );
-    } catch (err) {
-      console.error('Firestore doc reference error:', err);
-    }
-
-    // Sync to Order Management Storage for Admin Dashboard
-    try {
-      const currentStorage = getOrderStorageReservations();
-      saveOrderStorageReservations([
-        {
-          id: newRes.id,
-          reservationNumber: newRes.reservationNumber,
-          customerName: newRes.customerName,
-          customerPhone: newRes.customerPhone || phone,
-          productTitle: newRes.productTitle,
-          productPrice: newRes.productPrice,
-          productImage: newRes.productImage || '',
-          reservationType: 'online_hold',
-          durationHours: 24,
-          createdAt: newRes.createdAt,
-          expiresAt: newRes.expiresAt || new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
-          remainingBalance: newRes.productPrice,
-          status: 'pending',
-          assignedAdmin: 'النظام الآلي',
-          autoReleaseEnabled: true,
-          timeline: [
-            {
-              id: `t-${Date.now()}`,
-              timestamp: newRes.createdAt,
-              eventType: 'reservation_started',
-              title: 'تثبيت الحجز أونلاين',
-              description: 'تم تثبيت حجز الجهاز وحجبه 24 ساعة.',
-              actor: newRes.customerName,
-            },
-          ],
-        },
-        ...currentStorage,
-      ]);
-    } catch (err) {
-      console.error('saveOrderStorageReservations error:', err);
-    }
-
-    // Mark product as reserved
-    updateProduct(data.productId, { status: 'reserved' });
-
-    return newRes;
-  };
-
   const updateReservationStatus = (id: string, status: Reservation['status']) => {
-    setReservations((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status } : r))
-    );
+    setReservations((prev) => {
+      const updated = prev.map((r) => (r.id === id ? { ...r, status } : r));
+      try {
+        const item = updated.find((r) => r.id === id);
+        if (item) {
+          setDocData(FIRESTORE_COLLECTIONS.RESERVATIONS, item).catch(() => {});
+        }
+      } catch {}
+      return updated;
+    });
   };
 
-  const createOrder = (orderData: Omit<Order, 'id' | 'orderNumber' | 'createdAt'>) => {
+  const createOrder = async (orderData: Omit<Order, 'id' | 'orderNumber' | 'createdAt'>): Promise<Order> => {
+    const orderNumber = await defaultSequenceService.generateNextReference('order');
     const newOrder: Order = {
       ...orderData,
       id: IdGenerator.generateUniqueId('ord'),
-      orderNumber: defaultSequenceService.generateNextReference('order'),
+      orderNumber,
       createdAt: new Date().toISOString(),
     };
     setOrders((prev) => [newOrder, ...prev]);
+    try {
+      setDocData(FIRESTORE_COLLECTIONS.ORDERS, newOrder).catch(() => {});
+    } catch {}
     return newOrder;
   };
 
   const updateOrderStatus = (id: string, status: Order['status']) => {
-    setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o)));
+    setOrders((prev) => {
+      const updated = prev.map((o) => (o.id === id ? { ...o, status } : o));
+      try {
+        const item = updated.find((o) => o.id === id);
+        if (item) {
+          setDocData(FIRESTORE_COLLECTIONS.ORDERS, item).catch(() => {});
+        }
+      } catch {}
+      return updated;
+    });
   };
 
-  const createInvoice = (invData: Omit<Invoice, 'id' | 'invoiceNumber'>) => {
+  const createInvoice = async (invData: Omit<Invoice, 'id' | 'invoiceNumber'>): Promise<Invoice> => {
+    const invoiceNumber = await defaultSequenceService.generateNextReference('invoice');
     const newInv: Invoice = {
       ...invData,
       id: IdGenerator.generateUniqueId('inv'),
-      invoiceNumber: defaultSequenceService.generateNextReference('invoice'),
+      invoiceNumber,
     };
     setInvoices((prev) => [newInv, ...prev]);
+    try {
+      setDocData(FIRESTORE_COLLECTIONS.INVOICES, newInv).catch(() => {});
+    } catch {}
     return newInv;
   };
 
@@ -1025,11 +1123,23 @@ export const ShowroomProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       createdAt: new Date().toISOString(),
     };
     setTradeRequests((prev) => [newReq, ...prev]);
+    try {
+      setDocData(FIRESTORE_COLLECTIONS.EXCHANGE_REQUESTS, newReq).catch(() => {});
+    } catch {}
     return newReq;
   };
 
   const updateTradeRequestStatus = (id: string, status: TradeRequest['status']) => {
-    setTradeRequests((prev) => prev.map((t) => (t.id === id ? { ...t, status } : t)));
+    setTradeRequests((prev) => {
+      const updated = prev.map((t) => (t.id === id ? { ...t, status } : t));
+      try {
+        const item = updated.find((t) => t.id === id);
+        if (item) {
+          setDocData(FIRESTORE_COLLECTIONS.EXCHANGE_REQUESTS, item).catch(() => {});
+        }
+      } catch {}
+      return updated;
+    });
   };
 
   const submitSellRequest = (req: Omit<SellRequest, 'id' | 'createdAt' | 'status'> & Partial<SellRequest>): SellRequest => {
@@ -1041,12 +1151,15 @@ export const ShowroomProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       status: req.status || 'new',
       createdAt: new Date().toISOString(),
     };
-    setSellRequests((prev) => [newReq, ...prev]);
+    defaultSellRequestRepository.save(newReq);
     return newReq;
   };
 
   const updateSellRequestStatus = (id: string, status: SellRequest['status']) => {
-    setSellRequests((prev) => prev.map((s) => (s.id === id ? { ...s, status } : s)));
+    const current = defaultSellRequestRepository.getById(id) || sellRequests.find((s) => s.id === id);
+    if (current) {
+      defaultSellRequestRepository.save({ ...current, status });
+    }
   };
 
   const updateAiConfig = (config: Partial<AiConfig>) => {
@@ -1073,6 +1186,8 @@ export const ShowroomProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       navigateTo,
       selectedProductId,
       selectedCategoryId,
+      setSelectedCategoryId,
+      setSelectedCategory: setSelectedCategoryId,
 
       searchQuery,
       setSearchQuery,
@@ -1111,7 +1226,6 @@ export const ShowroomProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       togglePublish,
 
       reservations,
-      createReservation,
       updateReservationStatus,
 
       orders,
@@ -1128,6 +1242,9 @@ export const ShowroomProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       sellRequests,
       submitSellRequest,
       updateSellRequestStatus,
+
+      customerRequests,
+      refreshCustomerRequests: () => defaultRequestRepository.fetchLive(),
 
       analytics,
       aiConfig,
@@ -1167,6 +1284,7 @@ export const ShowroomProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       invoices,
       tradeRequests,
       sellRequests,
+      customerRequests,
       analytics,
       aiConfig,
       cart,

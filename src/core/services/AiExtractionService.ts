@@ -99,12 +99,12 @@ export class AiExtractionService {
   /**
    * Converts approved ExtractedProductData into a full EnrichedProduct domain object
    */
-  public static buildProductFromExtractedData(
+  public static async buildProductFromExtractedData(
     extracted: ExtractedProductData,
     adminName = 'PRO TECK Admin'
-  ): { product: EnrichedProduct; auditRecord: AiIntakeAuditRecord } {
+  ): Promise<{ product: EnrichedProduct; auditRecord: AiIntakeAuditRecord }> {
     const newId = IdGenerator.generateUniqueId('prod');
-    const internalCode = defaultSequenceService.generateNextReference('product');
+    const internalCode = await defaultSequenceService.generateNextReference('product');
 
     const totalCost = extracted.totalCost.value || (
       extracted.purchaseCost.value +
@@ -132,14 +132,16 @@ export class AiExtractionService {
       price: sellingPrice,
       description: extracted.generatedDescription.value,
       publicDescription: extracted.generatedDescription.value,
-      condition: (extracted.condition.value as ProductCondition) || 'used_warranty',
-      images: ['https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=1000&q=80'],
+      condition:
+        (extracted.condition.value as any) === 'new_in_box' || extracted.condition.value === 'new'
+          ? 'new'
+          : (extracted.condition.value as ProductCondition) || 'used_no_warranty',
+      images: [],
       videos: [],
       ...normalizeLifecycleState('available'),
       isNegotiable: true,
       warrantyAvailable: extracted.warrantyCardAvailable.value,
       warrantyCardAvailable: extracted.warrantyCardAvailable.value,
-      viewsCount: 0,
       reservationsCount: 0,
       purchaseRequestsCount: 0,
       negotiationsCount: 0,

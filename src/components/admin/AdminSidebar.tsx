@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   Package,
   Layers,
-  ShoppingBag,
   ShoppingCart,
   CreditCard,
   FileText,
@@ -37,14 +36,13 @@ interface AdminSidebarProps {
 }
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ isOpen, onClose }) => {
-  const { currentRoute, navigateTo, reservations, products } = useShowroom();
+  const { currentRoute, navigateTo, products } = useShowroom();
   const { logout, currentUser } = useAuth();
 
   const menuItems: MenuItem[] = [
     { id: 'admin-dashboard', label: 'لوحة التحكم والمؤشرات', icon: <LayoutDashboard className="w-5 h-5" /> },
     { id: 'admin-operations', label: 'مركز العمليات والتشغيل ERP', icon: <Activity className="w-5 h-5" /> },
     { id: 'admin-products', label: 'إدارة الأجهزة والمخزون', icon: <Package className="w-5 h-5" />, badge: products.length },
-    { id: 'admin-reservations', label: 'حجوزات العربون', icon: <ShoppingBag className="w-5 h-5" />, badge: reservations.length },
     { id: 'admin-orders', label: 'أوامر الشراء والمبيعات', icon: <ShoppingCart className="w-5 h-5" /> },
     { id: 'admin-customers', label: 'دليل العملاء والسجل', icon: <Users className="w-5 h-5" /> },
     { id: 'admin-finance', label: 'المالية والخزينة', icon: <DollarSign className="w-5 h-5" /> },

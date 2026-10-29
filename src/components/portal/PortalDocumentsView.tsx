@@ -32,7 +32,7 @@ export const PortalDocumentsView: React.FC<PortalDocumentsViewProps> = ({
             <span>مركز المستندات والإيصالات</span>
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            استعراض كافة إيصالات الحجز، الفواتير الضريبية، وشهادات الضمان الرسمية لـ PRO TECK.
+            استعراض كافة الفواتير الضريبية وشهادات الضمان الرسمية لـ PRO TECK.
           </p>
         </div>
 
@@ -62,16 +62,6 @@ export const PortalDocumentsView: React.FC<PortalDocumentsViewProps> = ({
           }`}
         >
           كافة المستندات ({documents.length})
-        </button>
-        <button
-          onClick={() => setFilterType('reservation_receipt')}
-          className={`px-4 py-2 rounded-xl transition-colors cursor-pointer shrink-0 ${
-            filterType === 'reservation_receipt'
-              ? 'bg-blue-600 text-white'
-              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
-          }`}
-        >
-          إيصالات الحجز
         </button>
 
         <button

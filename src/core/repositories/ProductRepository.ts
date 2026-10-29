@@ -5,12 +5,12 @@
 
 import { BaseRepository } from './BaseRepository';
 import { StorageAdapter } from '../storage/StorageAdapter';
-import { defaultStorageAdapter } from '../storage/LocalStorageAdapter';
+import { firestoreStorageAdapter } from '../storage/FirestoreStorageAdapter';
 import { Product } from '../../types';
 import { FIRESTORE_COLLECTIONS } from '../config/FirestoreConfig';
 
 export class ProductRepository extends BaseRepository<Product> {
-  constructor(storage: StorageAdapter = defaultStorageAdapter) {
+  constructor(storage: StorageAdapter = firestoreStorageAdapter) {
     super(FIRESTORE_COLLECTIONS.PRODUCTS, storage);
   }
 

@@ -23,6 +23,8 @@ export interface CustomerAuthContextType {
   openLoginModal: (onSuccessAction?: () => void) => void;
   closeLoginModal: () => void;
   signInWithGoogle: () => Promise<{ success: boolean; needsWhatsapp?: boolean; message?: string }>;
+  identifyCustomer: (name: string, phone: string) => Promise<{ success: boolean; message?: string; customer?: any }>;
+  loginWithNameAndPhone: (name: string, phone: string) => Promise<{ success: boolean; message?: string; customer?: any }>;
   completeWhatsAppRegistration: (whatsappPhone: string) => Promise<{ success: boolean; message: string }>;
   logoutCustomer: () => Promise<void>;
   requireCustomerAuth: (actionCallback: () => void) => boolean;
@@ -64,201 +66,39 @@ export const CustomerAuthProvider: React.FC<{ children: ReactNode }> = ({ childr
   const [conflictError, setConflictError] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
-  const normalizeCustomer = (cust: Customer): Customer & { name: string; phone: string; verified: boolean } => {
+  const normalizeCustomer = (cust: any): Customer & { name: string; phone: string; verified: boolean } => {
+    const rawPhone = cust.whatsappPhone || cust.primaryPhone || cust.phone || '';
+    const rawName = cust.fullName || cust.name || 'عميل PRO TECK';
     return {
       ...cust,
-      name: cust.fullName || 'عميل PRO TECK',
-      phone: cust.whatsappPhone || cust.primaryPhone || '',
+      fullName: rawName,
+      name: rawName,
+      primaryPhone: rawPhone,
+      whatsappPhone: rawPhone,
+      phone: rawPhone,
+      address: {
+        governorate: cust.address?.governorate || '',
+        cityArea: cust.address?.cityArea || '',
+        streetAddress: cust.address?.streetAddress || '',
+      },
       verified: true,
     };
   };
 
-  const syncCustomerToServer = async (custRecord: Customer, userOverride?: User | null) => {
-    try {
-      const activeUser = userOverride || auth.currentUser || firebaseUser || pendingAuthUser;
-      if (!activeUser) {
-        LoggerService.warn('CustomerAuthContext', 'Skipping /api/customers/sync: no active Firebase user session');
-        return;
-      }
-
-      let idToken: string | undefined;
-      try {
-        idToken = await activeUser.getIdToken();
-      } catch (tokenErr) {
-        LoggerService.warn('CustomerAuthContext', 'Failed to acquire Firebase ID token:', tokenErr);
-      }
-
-      if (!idToken) {
-        LoggerService.warn('CustomerAuthContext', 'Skipping /api/customers/sync: missing ID token');
-        return;
-      }
-
-      const payload: Customer = {
-        ...custRecord,
-        id: custRecord.id || activeUser.uid,
-        firebaseUid: custRecord.firebaseUid || activeUser.uid,
-      };
-
-      const res = await fetch('/api/customers/sync', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        LoggerService.warn('CustomerAuthContext', `/api/customers/sync returned HTTP status ${res.status}`);
-      }
-    } catch (err) {
-      LoggerService.warn('CustomerAuthContext', 'Non-blocking /api/customers/sync failed:', err);
-    }
-  };
-
-  const syncAndLoadCustomer = async (
-    fbUser: User
-  ): Promise<(Customer & { name: string; phone: string; verified: boolean }) | null> => {
-    setConflictError(null);
-    try {
-      // Step 1. Fast lookup in Supabase 'customers' table by firebase_uid
-      try {
-        const { data: supabaseRow, error: supabaseErr } = await supabase
-          .from('customers')
-          .select('*')
-          .eq('firebase_uid', fbUser.uid)
-          .maybeSingle();
-
-        if (!supabaseErr && supabaseRow) {
-          const mappedCust = mapPostgresRowToItem<Customer>('customers', supabaseRow);
-          const normalized = normalizeCustomer(mappedCust);
-          setCustomer(normalized);
-          setNeedsWhatsappPrompt(false);
-          setPendingAuthUser(null);
-          firestoreStorageAdapter.setItem(STORAGE_KEY_IDENTITY, normalized);
-
-          // Non-blocking background Firestore synchronization/update for future compatibility
-          getDocData<Customer>('customers', fbUser.uid)
-            .then((directDoc) => {
-              if (directDoc) {
-                updateDocData('customers', fbUser.uid, { lastActivityDate: new Date().toISOString() }).catch(() => {});
-              } else {
-                setDocData('customers', mappedCust).catch(() => {});
-              }
-            })
-            .catch(() => {});
-
-          return normalized;
-        }
-      } catch (sbQueryErr) {
-        LoggerService.warn('CustomerAuthContext', 'Supabase customer query check encountered warning:', sbQueryErr);
-      }
-
-      // Step 2. If not found by firebase_uid, check if email matches an existing customer in local/repository
-      const fbEmail = (fbUser.email || '').trim().toLowerCase();
-      if (fbEmail) {
-        try {
-          const allCustomers = await defaultCustomerRepository.findAll();
-          const matching = allCustomers.filter(
-            (c) => c.email && c.email.trim().toLowerCase() === fbEmail
-          );
-
-          if (matching.length > 1) {
-            const errMsg = 'تم العثور على أكثر من حساب بنفس البريد الإلكتروني. يرجى التواصل مع الدعم الفني لحل التعارض.';
-            LoggerService.warn('CustomerAuthContext', 'Multiple customer records match same email', { fbEmail, matches: matching.length });
-            setConflictError(errMsg);
-            return null;
-          }
-
-          if (matching.length === 1) {
-            const existing = matching[0];
-            LoggerService.info('CustomerAuthContext', `Linking Firebase UID ${fbUser.uid} to existing customer ${existing.id}`);
-
-            const linkedRecord: Customer = {
-              ...existing,
-              id: fbUser.uid,
-              firebaseUid: fbUser.uid,
-              email: fbUser.email || existing.email,
-              fullName: fbUser.displayName || existing.fullName,
-              lastActivityDate: new Date().toISOString(),
-            };
-
-            // Save immediately to repository and sync to Supabase via server API
-            try {
-              defaultCustomerRepository.save(linkedRecord);
-            } catch (saveErr) {
-              LoggerService.warn('CustomerAuthContext', 'Repository save warning:', saveErr);
-            }
-            syncCustomerToServer(linkedRecord, fbUser);
-
-            // Non-blocking Firestore sync
-            setDocData('customers', linkedRecord).catch(() => {});
-
-            const normalized = normalizeCustomer(linkedRecord);
-            setCustomer(normalized);
-            setNeedsWhatsappPrompt(false);
-            setPendingAuthUser(null);
-            firestoreStorageAdapter.setItem(STORAGE_KEY_IDENTITY, normalized);
-            return normalized;
-          }
-        } catch (repoErr) {
-          LoggerService.warn('CustomerAuthContext', 'Email matching warning:', repoErr);
-        }
-      }
-
-      // Non-blocking Firestore check in background without blocking UI
-      getDocData<Customer>('customers', fbUser.uid)
-        .then((directDoc) => {
-          if (directDoc) {
-            updateDocData('customers', fbUser.uid, { lastActivityDate: new Date().toISOString() }).catch(() => {});
-            syncCustomerToServer(directDoc, fbUser);
-          }
-        })
-        .catch(() => {});
-
-      // Step 3. New Customer (no existing profile found yet)
-      setNeedsWhatsappPrompt(true);
-      setPendingAuthUser(fbUser);
-      setCustomer(null);
-      return null;
-    } catch (err) {
-      LoggerService.error('CustomerAuthContext', 'Error in syncAndLoadCustomer', err);
-      return null;
-    }
-  };
-
-  // Firebase Auth State Observer
+  // Load saved customer identity on startup
   useEffect(() => {
-    setIsAuthLoading(true);
-
-    // Check for pending redirect sign-in result (mobile/popup fallback)
-    checkGoogleRedirectResult()
-      .then(async (redirectUser) => {
-        if (redirectUser) {
-          setFirebaseUser(redirectUser);
-          await syncAndLoadCustomer(redirectUser);
-        }
-      })
-      .catch((err) => {
-        LoggerService.warn('CustomerAuthContext', 'checkGoogleRedirectResult warning:', err);
-      });
-
-    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-      if (fbUser) {
-        setFirebaseUser(fbUser);
-        await syncAndLoadCustomer(fbUser);
-      } else {
-        setFirebaseUser(null);
-        setCustomer(null);
-        setNeedsWhatsappPrompt(false);
-        setPendingAuthUser(null);
-        setConflictError(null);
-        firestoreStorageAdapter.removeItem(STORAGE_KEY_IDENTITY);
+    try {
+      const saved = firestoreStorageAdapter.getItem<any>(STORAGE_KEY_IDENTITY);
+      if (saved && (saved.phone || saved.primaryPhone || saved.whatsappPhone)) {
+        const normalized = normalizeCustomer(saved);
+        setCustomer(normalized);
+        LoggerService.info('CustomerAuthContext', 'Restored customer session from local storage:', { phone: normalized.phone, name: normalized.name });
       }
+    } catch (err) {
+      LoggerService.warn('CustomerAuthContext', 'Error loading stored customer identity:', err);
+    } finally {
       setIsAuthLoading(false);
-    });
-
-    return () => unsubscribe();
+    }
   }, []);
 
   const openLoginModal = (onSuccessAction?: () => void) => {
@@ -272,94 +112,35 @@ export const CustomerAuthProvider: React.FC<{ children: ReactNode }> = ({ childr
     setLoginModalOpen(false);
   };
 
-  const signInWithGoogle = async () => {
+  // Fast Identification via Server Endpoint (Name + Egyptian Mobile)
+  const identifyCustomer = async (name: string, phone: string) => {
     setIsAuthLoading(true);
     setConflictError(null);
     try {
-      await signInWithGoogleRedirect();
-      return { success: true };
-    } catch (err: any) {
-      LoggerService.error('CustomerAuthContext', 'Google sign-in redirect failed', err);
-      setIsAuthLoading(false);
-      return { success: false, message: err?.message || 'فشل تسجيل الدخول بواسطة Google' };
-    }
-  };
-
-  const completeWhatsAppRegistration = async (whatsappPhone: string) => {
-    const activeUser = pendingAuthUser || firebaseUser || auth.currentUser;
-    if (!activeUser) {
-      return { success: false, message: 'جلسة تسجيل الدخول غير نشطة. يرجى محاولة تسجيل الدخول بجوجل مجدداً.' };
-    }
-
-    const valPhone = PhoneValidator.validateEgyptianPhoneDetailed(whatsappPhone);
-    if (!valPhone.isValid) {
-      return {
-        success: false,
-        message: valPhone.errorMessage || 'رقم الواتساب يجب أن يكون رقم مصري صحيح (11 رقم يبدأ بـ 01)',
-      };
-    }
-
-    const uid = activeUser.uid;
-    const normalizedPhone = valPhone.normalizedNumber;
-
-    const newCustomerRecord: Customer = {
-      id: uid,
-      firebaseUid: uid,
-      fullName: activeUser.displayName || 'عميل محترم',
-      email: activeUser.email || '',
-      primaryPhone: normalizedPhone,
-      whatsappPhone: normalizedPhone,
-      preferredContactMethod: 'whatsapp',
-      status: 'active',
-      tags: ['Google Auth', 'حساب موثق'],
-      firstContactDate: new Date().toISOString(),
-      lastActivityDate: new Date().toISOString(),
-      totalRequests: 0,
-      totalPurchases: 0,
-      totalReservations: 0,
-      totalSpent: 0,
-      address: {
-        governorate: 'القاهرة',
-        cityArea: 'المعادي',
-        streetAddress: '',
-      },
-      notes: [],
-      communicationLogs: [],
-      timeline: [
-        {
-          id: `tl-${Date.now()}`,
-          timestamp: new Date().toISOString(),
-          actor: 'العميل',
-          eventType: 'customer_created',
-          title: 'تسجيل حساب جديد عبر Google',
-          description: `تم إنشاء الحساب بـ Google وتوثيق رقم الواتساب (${normalizedPhone})`,
+      const res = await fetch('/api/customers/identify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-      ],
-      documents: [],
-      visitedProducts: [],
-      isArchived: false,
-    };
-
-    try {
-      // Fire non-blocking Firestore save in background for compatibility
-      setDocData('customers', newCustomerRecord).catch((fErr) => {
-        LoggerService.warn('CustomerAuthContext', 'Non-blocking Firestore setDocData failed:', fErr);
+        body: JSON.stringify({ name, phone }),
       });
 
-      // Save to repository & sync to Supabase backend API
-      try {
-        defaultCustomerRepository.save(newCustomerRecord);
-      } catch (saveErr) {
-        LoggerService.warn('CustomerAuthContext', 'Repository save warning:', saveErr);
+      const data = await res.json();
+      if (!res.ok || data.status !== 'success') {
+        throw new Error(data.error || 'تعذر تسجيل الدخول بالاسم ورقم الهاتف');
       }
-      syncCustomerToServer(newCustomerRecord, activeUser);
 
-      const normalized = normalizeCustomer(newCustomerRecord);
+      const normalized = normalizeCustomer(data.customer);
       setCustomer(normalized);
-      setNeedsWhatsappPrompt(false);
-      setPendingAuthUser(null);
-      setLoginModalOpen(false);
       firestoreStorageAdapter.setItem(STORAGE_KEY_IDENTITY, normalized);
+
+      try {
+        defaultCustomerRepository.save(normalized);
+      } catch (repoErr) {
+        LoggerService.warn('CustomerAuthContext', 'Repository save warning:', repoErr);
+      }
+
+      setLoginModalOpen(false);
 
       if (pendingAction) {
         setTimeout(() => {
@@ -368,31 +149,58 @@ export const CustomerAuthProvider: React.FC<{ children: ReactNode }> = ({ childr
         }, 100);
       }
 
-      return { success: true, message: 'تم إنشاء وتوثيق حسابك بنجاح' };
+      LoggerService.info('CustomerAuthContext', 'Customer identified successfully:', { id: normalized.id, name: normalized.name, phone: normalized.phone });
+      return { success: true, customer: normalized };
     } catch (err: any) {
-      LoggerService.error('CustomerAuthContext', 'Failed to save new customer document', err);
-      return { success: false, message: 'حدث خطأ أثناء حفظ البيانات. يرجى المحاولة مرة أخرى.' };
+      const message = err?.message || 'حدث خطأ أثناء تسجيل الدخول بالاسم ورقم الهاتف';
+      setConflictError(message);
+      LoggerService.error('CustomerAuthContext', 'Customer identify failed:', err);
+      return { success: false, message };
+    } finally {
+      setIsAuthLoading(false);
     }
+  };
+
+  const loginWithNameAndPhone = identifyCustomer;
+
+  /*
+   * [GOOGLE SIGN-IN DISABLED IN FAVOR OF NAME & PHONE LOGIN]
+   * In-app browsers (WhatsApp/Instagram/Facebook webviews) frequently block or fail Google redirect OAuth.
+   * Replaced with direct Name & Phone authentication via /api/customers/identify.
+   * Kept signature intact for full backwards-compatibility.
+   */
+  const signInWithGoogle = async () => {
+    openLoginModal();
+    return { success: true };
+  };
+
+  /*
+   * [LEGACY GOOGLE AUTH / WHATSAPP REGISTRATION]
+   * Preserved for backwards compatibility with any remaining callers.
+   */
+  const completeWhatsAppRegistration = async (whatsappPhone: string) => {
+    if (customer?.name) {
+      return identifyCustomer(customer.name, whatsappPhone);
+    }
+    return identifyCustomer('عميل PRO TECK', whatsappPhone);
   };
 
   const logoutCustomer = async () => {
     try {
-      await logoutUser();
-    } catch (err) {
-      LoggerService.warn('CustomerAuthContext', 'Logout warning', err);
-    } finally {
-      setFirebaseUser(null);
+      firestoreStorageAdapter.removeItem(STORAGE_KEY_IDENTITY);
       setCustomer(null);
+      setFirebaseUser(null);
       setNeedsWhatsappPrompt(false);
       setPendingAuthUser(null);
       setConflictError(null);
-      firestoreStorageAdapter.removeItem(STORAGE_KEY_IDENTITY);
       LoggerService.info('CustomerAuthContext', 'Customer logged out cleanly');
+    } catch (err) {
+      LoggerService.warn('CustomerAuthContext', 'Logout warning:', err);
     }
   };
 
   const requireCustomerAuth = (actionCallback: () => void): boolean => {
-    if (customer && customer.verified) {
+    if (customer && (customer.phone || customer.primaryPhone)) {
       actionCallback();
       return true;
     }
@@ -405,7 +213,7 @@ export const CustomerAuthProvider: React.FC<{ children: ReactNode }> = ({ childr
       value={{
         firebaseUser,
         customer,
-        isCustomerAuthenticated: !!(customer && customer.verified),
+        isCustomerAuthenticated: !!(customer && (customer.phone || customer.primaryPhone || customer.whatsappPhone)),
         isAuthLoading,
         loginModalOpen,
         needsWhatsappPrompt,
@@ -414,6 +222,8 @@ export const CustomerAuthProvider: React.FC<{ children: ReactNode }> = ({ childr
         openLoginModal,
         closeLoginModal,
         signInWithGoogle,
+        identifyCustomer,
+        loginWithNameAndPhone,
         completeWhatsAppRegistration,
         logoutCustomer,
         requireCustomerAuth,

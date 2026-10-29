@@ -5,13 +5,14 @@
 
 import { BaseRepository } from './BaseRepository';
 import { StorageAdapter } from '../storage/StorageAdapter';
-import { defaultStorageAdapter } from '../storage/LocalStorageAdapter';
+import { firestoreStorageAdapter } from '../storage/FirestoreStorageAdapter';
 import { FinancialAlert } from '../../types/adminFinance';
+import { FIRESTORE_COLLECTIONS } from '../config/FirestoreConfig';
 
-const ALERTS_KEY = 'proteck_admin_financial_alerts_v1';
+const ALERTS_KEY = FIRESTORE_COLLECTIONS.FINANCIAL_ALERTS;
 
 export class FinancialAlertRepository extends BaseRepository<FinancialAlert> {
-  constructor(storage: StorageAdapter = defaultStorageAdapter) {
+  constructor(storage: StorageAdapter = firestoreStorageAdapter) {
     super(ALERTS_KEY, storage);
   }
 

@@ -3,6 +3,7 @@ import { Product } from '../../types';
 import { useShowroom } from '../../context/ShowroomContext';
 import { Badge } from '../ui/Badge';
 import { ArrowLeft, Eye } from 'lucide-react';
+import { DEFAULT_PRODUCT_PLACEHOLDER } from '../../constants/placeholders';
 
 interface SimilarProductsProps {
   currentProduct: Product;
@@ -84,8 +85,11 @@ export const SimilarProducts: React.FC<SimilarProductsProps> = ({ currentProduct
           >
             <div className="relative h-44 rounded-2xl overflow-hidden bg-slate-950">
               <img
-                src={item.images?.[0] || 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80'}
+                src={item.images?.[0] || DEFAULT_PRODUCT_PLACEHOLDER}
                 alt={item.title}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = DEFAULT_PRODUCT_PLACEHOLDER;
+                }}
                 loading="lazy"
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               />

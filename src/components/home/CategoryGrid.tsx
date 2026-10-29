@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useShowroom } from '../../context/ShowroomContext';
 import { Category } from '../../types';
+import { getCategoryCover, generateCategoryCoverSvg } from '../../utils/categoryVisuals';
 
 export const CategoryGrid: React.FC = () => {
   const { categories, products, navigateTo } = useShowroom();
@@ -76,8 +77,15 @@ export const CategoryGrid: React.FC = () => {
               {/* Category Cover Image with Gradient Overlay */}
               <div className="relative w-full h-44 overflow-hidden bg-slate-100 dark:bg-slate-950">
                 <img
-                  src={category.coverImage || 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=800&q=80'}
+                  src={getCategoryCover(category)}
                   alt={category.name}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = generateCategoryCoverSvg(
+                      category.iconName,
+                      category.name,
+                      category.slug
+                    );
+                  }}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 brightness-95 dark:brightness-90"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/30 to-transparent" />

@@ -1,5 +1,5 @@
 import React from 'react';
-import { PurchaseRequest, ReservationItem } from '../../../types/orderManagementCenter';
+import { PurchaseRequest } from '../../../types/orderManagementCenter';
 import {
   Clock,
   User,
@@ -15,14 +15,12 @@ import {
 
 interface OrderKanbanViewProps {
   purchaseRequests: PurchaseRequest[];
-  reservations: ReservationItem[];
   onSelectOrder: (item: any, type: string) => void;
   onMoveStatus: (id: string, newStatus: string) => void;
 }
 
 export const OrderKanbanView: React.FC<OrderKanbanViewProps> = ({
   purchaseRequests,
-  reservations,
   onSelectOrder,
   onMoveStatus,
 }) => {
@@ -30,7 +28,6 @@ export const OrderKanbanView: React.FC<OrderKanbanViewProps> = ({
     { id: 'new', title: 'طلب جديد (New)', color: 'border-blue-500/40 bg-blue-500/5 text-blue-400' },
     { id: 'review', title: 'قيد المراجعة (Review)', color: 'border-amber-500/40 bg-amber-500/5 text-amber-400' },
     { id: 'waiting_customer', title: 'بانتظار العميل (Waiting)', color: 'border-indigo-500/40 bg-indigo-500/5 text-indigo-400' },
-    { id: 'reservation', title: 'حجز 24 ساعة (Reservation)', color: 'border-purple-500/40 bg-purple-500/5 text-purple-400' },
     { id: 'ready_pickup', title: 'جاهز للاستلام (Ready)', color: 'border-teal-500/40 bg-teal-500/5 text-teal-400' },
     { id: 'completed', title: 'مكتمل ومباع (Completed)', color: 'border-green-500/40 bg-green-500/5 text-green-400' },
     { id: 'cancelled', title: 'ملغي / مرفوض (Cancelled)', color: 'border-rose-500/40 bg-rose-500/5 text-rose-400' },
@@ -42,7 +39,6 @@ export const OrderKanbanView: React.FC<OrderKanbanViewProps> = ({
     if (s === 'new') return 'new';
     if (s === 'pending_review' || s === 'pending') return 'review';
     if (s === 'waiting_customer') return 'waiting_customer';
-    if (s === 'confirmed' || s === 'converted_to_reservation' || s === 'Reserved') return 'reservation';
     if (s === 'ready_for_pickup') return 'ready_pickup';
     if (s === 'completed' || s === 'converted_to_sale') return 'completed';
     if (s === 'cancelled' || s === 'rejected' || s === 'expired') return 'cancelled';
@@ -50,10 +46,7 @@ export const OrderKanbanView: React.FC<OrderKanbanViewProps> = ({
   };
 
   // Combine items for Kanban
-  const allKanbanItems = [
-    ...purchaseRequests.map((pr) => ({ ...pr, _type: 'request' })),
-    ...reservations.map((res) => ({ ...res, _type: 'reservation' })),
-  ];
+  const allKanbanItems = purchaseRequests.map((pr) => ({ ...pr, _type: 'request' }));
 
   return (
     <div className="flex gap-4 overflow-x-auto pb-6 pt-2 custom-scrollbar min-h-[600px] dir-rtl">
@@ -89,10 +82,10 @@ export const OrderKanbanView: React.FC<OrderKanbanViewProps> = ({
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-mono text-[10px] font-extrabold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
-                        {item.referenceNumber || item.reservationNumber || 'REF-N/A'}
+                        {item.referenceNumber || 'REF-N/A'}
                       </span>
                       <span className="text-[10px] text-slate-500">
-                        {item._type === 'request' ? 'طلب شراء' : 'حجز عربون'}
+                        طلب شراء
                       </span>
                     </div>
 
@@ -140,13 +133,6 @@ export const OrderKanbanView: React.FC<OrderKanbanViewProps> = ({
                           className="p-1 rounded bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 cursor-pointer"
                         >
                           ✕
-                        </button>
-                        <button
-                          onClick={() => onMoveStatus(item.id, 'converted_to_reservation')}
-                          title="تحويل إلى حجز"
-                          className="p-1 rounded bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 cursor-pointer"
-                        >
-                          →
                         </button>
                       </div>
                     </div>

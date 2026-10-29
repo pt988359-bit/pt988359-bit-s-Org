@@ -5,13 +5,14 @@
 
 import { BaseRepository } from './BaseRepository';
 import { StorageAdapter } from '../storage/StorageAdapter';
-import { defaultStorageAdapter } from '../storage/LocalStorageAdapter';
+import { firestoreStorageAdapter } from '../storage/FirestoreStorageAdapter';
 import { ProductCostSheet } from '../../types/adminFinance';
+import { FIRESTORE_COLLECTIONS } from '../config/FirestoreConfig';
 
-const COST_SHEETS_KEY = 'proteck_admin_cost_sheets_v1';
+const COST_SHEETS_KEY = FIRESTORE_COLLECTIONS.COST_SHEETS;
 
 export class CostSheetRepository extends BaseRepository<ProductCostSheet & { id: string }> {
-  constructor(storage: StorageAdapter = defaultStorageAdapter) {
+  constructor(storage: StorageAdapter = firestoreStorageAdapter) {
     super(COST_SHEETS_KEY, storage);
   }
 

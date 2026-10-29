@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { normalizeEgyptianPhone } from '../../../utils/phoneUtils';
 import {
   Bot,
   X,
@@ -38,10 +39,10 @@ export const OrderAiAssistantModal: React.FC<OrderAiAssistantModalProps> = ({ or
 معك خدمة العملاء من PRO TECK - فرع المعادي.
 
 بخصوص طلبك رقم (${orderData.referenceNumber}) لـ "${orderData.productTitle}":
-يسعدنا إبلاغك بأن الجهاز جاهز ومحجوز باسمكم بالمعرض.
-المبلغ المطلوب للتأكيد هو: ${orderData.productPrice.toLocaleString('ar-EG')} ج.م.
+يسعدنا إبلاغك بأن الجهاز جاهز للمعاينة والاستلام بالمعرض.
+المبلغ المطلوب هو: ${orderData.productPrice.toLocaleString('ar-EG')} ج.م.
 
-يمكنك إرسال العربون بسهولة عبر InstaPay أو زيارتنا في شارع 68 المعادي للمعاينة.
+يمكنك السداد كاش أو عبر InstaPay عند الاستلام، أو زيارتنا في شارع 68 المعادي للمعاينة والتجربة.
 للرد السريع لا تتردد بالرد على هذه الرسالة مباشرة!`;
   };
 
@@ -188,7 +189,7 @@ export const OrderAiAssistantModal: React.FC<OrderAiAssistantModalProps> = ({ or
               <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 flex items-center justify-between">
                 <span>تنبيه: يمكنك نسخ النص وإرساله يدوياً عبر تطبيق الواتساب الخاص بالمعرض.</span>
                 <a
-                  href={`https://wa.me/${orderData.customerPhone}?text=${encodeURIComponent(generateWhatsappDraft())}`}
+                  href={`https://wa.me/${normalizeEgyptianPhone(orderData.customerPhone || '')}?text=${encodeURIComponent(generateWhatsappDraft())}`}
                   target="_blank"
                   rel="noreferrer"
                   className="px-3 py-1 rounded-lg bg-emerald-600 text-white font-extrabold hover:bg-emerald-500 flex items-center gap-1"
@@ -223,7 +224,7 @@ export const OrderAiAssistantModal: React.FC<OrderAiAssistantModalProps> = ({ or
                 <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between">
                   <div className="space-y-0.5">
                     <strong className="text-white font-bold block">1. إرسال تذكير بالدفع عبر الواتساب</strong>
-                    <span className="text-slate-400">لإنهاء فترة الانتظار وتحويل الطلب إلى حجز مؤكد.</span>
+                    <span className="text-slate-400">لإنهاء فترة الانتظار وتأكيد طلب الشراء.</span>
                   </div>
                   <span className="px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-400 font-bold text-[10px]">توصية عالية</span>
                 </div>

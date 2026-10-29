@@ -45,7 +45,7 @@ export class FinanceService {
     private readonly completedSaleRepo: CompletedSaleRepository = defaultCompletedSaleRepository
   ) {}
 
-  public recordExpense(payload: {
+  public async recordExpense(payload: {
     category: string;
     categoryLabelAr: string;
     amount: number;
@@ -56,7 +56,7 @@ export class FinanceService {
     supplierName?: string;
     createdBy: string;
     notes?: string;
-  }): ExpenseItem {
+  }): Promise<ExpenseItem> {
     const startTime = performance.now();
     LoggerService.info('FinanceService', 'Processing expense recording transaction', payload);
 
@@ -67,7 +67,7 @@ export class FinanceService {
       throw err;
     }
 
-    const referenceNumber = this.sequenceService.generateNextReference('expense');
+    const referenceNumber = await this.sequenceService.generateNextReference('expense');
     const id = IdGenerator.generateUniqueId('exp');
 
     const newExpense: ExpenseItem = {
@@ -88,7 +88,7 @@ export class FinanceService {
     };
 
     // Calculate cash ledger entry
-    const cashRefNumber = this.sequenceService.generateNextReference('financialLedger');
+    const cashRefNumber = await this.sequenceService.generateNextReference('financialLedger');
     const currentBalance = this.cashRepo.getLatestRunningBalance();
     const newBalance = currentBalance - payload.amount;
 
@@ -158,15 +158,15 @@ export class FinanceService {
     return newExpense;
   }
 
-  public recordCashFlow(payload: {
+  public async recordCashFlow(payload: {
     type: 'money_in' | 'money_out';
     category: string;
     amount: number;
     description: string;
     relatedReference?: string;
     createdBy: string;
-  }): CashLedgerEntry {
-    const referenceNumber = this.sequenceService.generateNextReference('financialLedger');
+  }): Promise<CashLedgerEntry> {
+    const referenceNumber = await this.sequenceService.generateNextReference('financialLedger');
     const currentBalance = this.cashRepo.getLatestRunningBalance();
     const newBalance = payload.type === 'money_in' ? currentBalance + payload.amount : currentBalance - payload.amount;
 

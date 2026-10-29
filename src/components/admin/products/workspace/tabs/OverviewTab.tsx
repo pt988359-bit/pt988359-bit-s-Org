@@ -1,10 +1,11 @@
 import React from 'react';
 import { EnrichedProduct, ProductLifecycleStage } from '../../../../../types/productStudio';
+import { ProductCondition } from '../../../../../types';
+import { defaultProductRepository } from '../../../../../core/repositories/ProductRepository';
 import { LIFECYCLE_STAGE_LABELS, normalizeLifecycleState } from '../../../../../utils/productStudioStorage';
 import {
   Package,
   Clock,
-  Eye,
   ShieldCheck,
   CheckCircle2,
   DollarSign,
@@ -62,20 +63,36 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     });
   };
 
+  const handleConditionChange = (newCondition: ProductCondition) => {
+    const newLog = {
+      id: `audit-${Date.now()}`,
+      date: new Date().toLocaleString('ar-EG'),
+      adminName: 'PRO TECK Admin',
+      adminRole: 'Super Admin',
+      action: 'تحديث حالة فرز الجهاز',
+      fieldChanged: 'condition',
+      previousValue: product.condition,
+      newValue: newCondition,
+      reason: 'تعديل يدوي من لوحة تحكم الاستوديو',
+    };
+
+    try {
+      defaultProductRepository.update(product.id, { condition: newCondition });
+    } catch {
+      // Safe fallback
+    }
+
+    onUpdateProduct({
+      condition: newCondition,
+      auditRecords: [newLog, ...(product.auditRecords || [])],
+      updatedAt: new Date().toISOString(),
+    });
+  };
+
   return (
     <div className="space-y-6 dir-rtl text-xs">
       {/* Quick Stats Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
-            <Eye className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="text-slate-400 text-[10px] block">المشاهدات الكلية</span>
-            <span className="font-mono text-base font-extrabold text-white">{product.viewsCount || 0}</span>
-          </div>
-        </div>
-
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
             <Clock className="w-5 h-5" />
@@ -149,9 +166,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <option value="photography">6. التصوير الفوتوغرافي</option>
               <option value="pending_review">7. المراجعة الفنية</option>
               <option value="published">8. منشور بالمعرض والموقع</option>
-              <option value="reserved">9. محجوز بعربون رقمي</option>
-              <option value="sold">10. تم البيع والتسليم</option>
-              <option value="archived">11. مؤرشف للسلة</option>
+              <option value="sold">9. تم البيع والتسليم</option>
+              <option value="archived">10. مؤرشف للسلة</option>
             </select>
           </div>
 
@@ -164,7 +180,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
             >
               <option value="available">متاح للعرض الشفاف والشراء (Available)</option>
-              <option value="reserved">محجوز مع إمكانية الانتظار (Reserved)</option>
               <option value="sold">مباع - للتوضيح بالأرشيف (Sold)</option>
               <option value="maintenance">في الصيانة - غير متاح للبيع (Maintenance)</option>
               <option value="hidden">مخفي من المعرض والموقع (Hidden)</option>
@@ -212,10 +227,25 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             </div>
 
             <div>
-              <span className="text-slate-500 block text-[11px]">حالة الفرز:</span>
-              <span className="font-bold text-slate-300 text-xs">
-                {product.condition === 'new' ? 'جديد بالكرتونة' : `مستعمل بحالة الزيرو (${product.conditionRating || 9.5}/10)`}
-              </span>
+              <label htmlFor="product-condition-select" className="text-slate-500 block text-[11px] font-bold mb-1">
+                حالة الفرز:
+              </label>
+              <select
+                id="product-condition-select"
+                value={
+                  product.condition === 'new'
+                    ? 'new'
+                    : product.condition === 'used_warranty' || product.condition === 'refurbished'
+                    ? 'used_warranty'
+                    : 'used_no_warranty'
+                }
+                onChange={(e) => handleConditionChange(e.target.value as ProductCondition)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 font-bold cursor-pointer transition-colors"
+              >
+                <option value="new">جديد</option>
+                <option value="used_warranty">مستعمل بضمان الشركة</option>
+                <option value="used_no_warranty">مستعمل بدون ضمان</option>
+              </select>
             </div>
 
             <div>

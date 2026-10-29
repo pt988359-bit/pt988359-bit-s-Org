@@ -1,6 +1,6 @@
 import React from 'react';
 import { Customer } from '../../../../types/customerHub';
-import { Clock, User, FileText, ShoppingBag, BookmarkCheck, DollarSign, Percent, RefreshCw, Repeat, ShieldCheck } from 'lucide-react';
+import { Clock, User, FileText, ShoppingBag, DollarSign, Percent, RefreshCw, Repeat, ShieldCheck } from 'lucide-react';
 
 interface TimelineTabProps {
   customer: Customer;
@@ -11,10 +11,6 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ customer }) => {
     switch (eventType) {
       case 'customer_created':
         return <User className="w-4 h-4 text-blue-400" />;
-      case 'reservation_created':
-        return <BookmarkCheck className="w-4 h-4 text-amber-400" />;
-      case 'reservation_confirmed':
-        return <BookmarkCheck className="w-4 h-4 text-emerald-400" />;
       case 'negotiation_started':
         return <Percent className="w-4 h-4 text-purple-400" />;
       case 'purchase_approved':
@@ -40,7 +36,7 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ customer }) => {
           <span>الجدول الزمني الموحد لأنشطة العميل (Unified Activity Timeline)</span>
         </h3>
         <p className="text-slate-400 text-[11px] mt-0.5">
-          سجل الزمني الشامل لكافة التعاملات والحجوزات والفواتير الصادرة باسم العميل
+          سجل الزمني الشامل لكافة التعاملات والطلبات والفواتير الصادرة باسم العميل
         </p>
       </div>
 

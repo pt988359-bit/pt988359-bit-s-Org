@@ -11,7 +11,6 @@ const CatalogPage = lazy(() => import('../components/CatalogPage').then(m => ({ 
 const ProductDetailPage = lazy(() => import('../components/ProductDetailPage').then(m => ({ default: m.ProductDetailPage })));
 const CategoriesPage = lazy(() => import('../components/public/CategoriesPage').then(m => ({ default: m.CategoriesPage })));
 const SellRequestPage = lazy(() => import('../components/SellRequestPage').then(m => ({ default: m.SellRequestPage })));
-const ReservationCartPage = lazy(() => import('../components/ReservationCartPage').then(m => ({ default: m.ReservationCartPage })));
 const ContactPage = lazy(() => import('../components/ContactPage').then(m => ({ default: m.ContactPage })));
 const AboutPage = lazy(() => import('../components/public/AboutPage').then(m => ({ default: m.AboutPage })));
 const FaqPage = lazy(() => import('../components/public/FaqPage').then(m => ({ default: m.FaqPage })));
@@ -46,8 +45,6 @@ export const PublicLayout: React.FC = () => {
         return <CategoriesPage />;
       case 'sell':
         return <SellRequestPage />;
-      case 'reservation':
-        return <ReservationCartPage />;
       case 'contact':
         return <ContactPage />;
       case 'about':

@@ -5,13 +5,14 @@
 
 import { BaseRepository } from './BaseRepository';
 import { StorageAdapter } from '../storage/StorageAdapter';
-import { defaultStorageAdapter } from '../storage/LocalStorageAdapter';
+import { firestoreStorageAdapter } from '../storage/FirestoreStorageAdapter';
 import { ProcurementItem } from '../../types/adminFinance';
+import { FIRESTORE_COLLECTIONS } from '../config/FirestoreConfig';
 
-const PROCUREMENT_KEY = 'proteck_admin_procurement_v1';
+const PROCUREMENT_KEY = FIRESTORE_COLLECTIONS.PROCUREMENT;
 
 export class ProcurementRepository extends BaseRepository<ProcurementItem> {
-  constructor(storage: StorageAdapter = defaultStorageAdapter) {
+  constructor(storage: StorageAdapter = firestoreStorageAdapter) {
     super(PROCUREMENT_KEY, storage);
   }
 

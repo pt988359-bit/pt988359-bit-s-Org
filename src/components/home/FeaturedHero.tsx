@@ -2,6 +2,7 @@ import React from 'react';
 import { Sparkles, ShieldCheck, Tag, Eye, ShoppingBag, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Product } from '../../types';
 import { useShowroom } from '../../context/ShowroomContext';
+import { DEFAULT_PRODUCT_PLACEHOLDER } from '../../constants/placeholders';
 
 interface FeaturedHeroProps {
   onQuickView: (product: Product) => void;
@@ -54,9 +55,15 @@ export const FeaturedHero: React.FC<FeaturedHeroProps> = ({ onQuickView }) => {
               <span className={`px-3 py-1 rounded-full text-[11px] font-bold shadow-xs ${
                 product.condition === 'new'
                   ? 'bg-emerald-500 text-white'
+                  : product.condition === 'used_warranty' || product.condition === 'refurbished'
+                  ? 'bg-blue-600 text-white'
                   : 'bg-amber-500 text-white'
               }`}>
-                {product.condition === 'new' ? 'جديد بالضمان' : `مستعمل بحالة ${product.conditionRating ? `${product.conditionRating}/10` : 'ممتازة'}`}
+                {product.condition === 'new'
+                  ? 'جديد بالضمان'
+                  : product.condition === 'used_warranty' || product.condition === 'refurbished'
+                  ? `مستعمل بضمان الشركة (${product.conditionRating ? `${product.conditionRating}/10` : 'ممتاز'})`
+                  : `مستعمل بدون ضمان (${product.conditionRating ? `${product.conditionRating}/10` : 'بحالة جيدة'})`}
               </span>
 
               <div className="flex items-center gap-1">
@@ -80,8 +87,11 @@ export const FeaturedHero: React.FC<FeaturedHeroProps> = ({ onQuickView }) => {
               className="relative w-full h-52 bg-slate-50 dark:bg-slate-950 rounded-2xl overflow-hidden mb-4 flex items-center justify-center p-4 cursor-pointer group-hover:bg-slate-100/80 dark:group-hover:bg-slate-900/80 transition-colors"
             >
               <img
-                src={product.images?.[0] || 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=800&q=80'}
+                src={product.images?.[0] || DEFAULT_PRODUCT_PLACEHOLDER}
                 alt={product.title}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = DEFAULT_PRODUCT_PLACEHOLDER;
+                }}
                 className="max-h-44 object-contain group-hover:scale-105 transition-transform duration-300 drop-shadow-sm"
               />
 

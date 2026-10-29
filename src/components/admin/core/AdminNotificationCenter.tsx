@@ -98,9 +98,6 @@ export const AdminNotificationCenter: React.FC<AdminNotificationCenterProps> = (
         return <CreditCard className="w-4 h-4 text-emerald-400" />;
       case 'purchase_request':
         return <ShoppingCart className="w-4 h-4 text-blue-400" />;
-      case 'reservation':
-      case 'reservation_expiring':
-        return <ShoppingBag className="w-4 h-4 text-amber-400" />;
       case 'ai_suggestion':
         return <Sparkles className="w-4 h-4 text-indigo-400" />;
       case 'low_stock':

@@ -1,5 +1,7 @@
 import React, { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { Lock, KeyRound, Eye, EyeOff, ShieldCheck, AlertCircle, ArrowRight, Loader2, LogOut } from 'lucide-react';
+import { signInWithCustomToken, signOut as firebaseSignOut } from 'firebase/auth';
+import { auth } from '../../firebase/auth';
 import { useShowroom } from '../../context/ShowroomContext';
 import { AdminSessionService } from '../../core/services/AdminSessionService';
 
@@ -19,6 +21,11 @@ export const useAdminAccess = () => useContext(AdminAccessContext);
 
 export async function logoutAdminAccessSession(): Promise<boolean> {
   try {
+    try {
+      await firebaseSignOut(auth);
+    } catch (fbSignOutErr) {
+      console.warn('Firebase sign out during admin logout:', fbSignOutErr);
+    }
     const storedToken = AdminSessionService.getToken();
     AdminSessionService.clearToken();
     const res = await fetch('/api/admin/access/logout', {
@@ -66,13 +73,20 @@ export const AdminAccessGate: React.FC<AdminAccessGateProps> = ({ children }) =>
         if (authed && data.token) {
           AdminSessionService.setToken(data.token);
         }
+        if (authed && data.firebaseCustomToken) {
+          try {
+            await signInWithCustomToken(auth, data.firebaseCustomToken);
+          } catch (fbAuthErr) {
+            console.warn('Firebase signInWithCustomToken during check error:', fbAuthErr);
+          }
+        }
         setIsAuthenticated(authed);
         return authed;
       }
       setIsAuthenticated(false);
       return false;
     } catch (err) {
-      console.error('Check admin access failed:', err);
+      console.warn('Check admin access notice:', err);
       setIsAuthenticated(false);
       return false;
     } finally {
@@ -108,13 +122,20 @@ export const AdminAccessGate: React.FC<AdminAccessGateProps> = ({ children }) =>
         if (data.token) {
           AdminSessionService.setToken(data.token);
         }
+        if (data.firebaseCustomToken) {
+          try {
+            await signInWithCustomToken(auth, data.firebaseCustomToken);
+          } catch (fbAuthErr) {
+            console.warn('Firebase signInWithCustomToken during login error:', fbAuthErr);
+          }
+        }
         setIsAuthenticated(true);
         setPassword('');
       } else {
         setError(data.error || 'كلمة السر غير صحيحة. يرجى المحاولة مرة أخرى.');
       }
     } catch (err: any) {
-      console.error('Admin access login error:', err);
+      console.warn('Admin access login notice:', err);
       setError(err?.message || 'تعذر الاتصال بالخادم، يرجى المحاولة لاحقًا.');
     } finally {
       setIsSubmitting(false);
@@ -123,6 +144,11 @@ export const AdminAccessGate: React.FC<AdminAccessGateProps> = ({ children }) =>
 
   const handleLogout = async () => {
     AdminSessionService.clearToken();
+    try {
+      await firebaseSignOut(auth);
+    } catch (fbSignOutErr) {
+      console.warn('Firebase sign out error:', fbSignOutErr);
+    }
     await logoutAdminAccessSession();
     setIsAuthenticated(false);
     setPassword('');

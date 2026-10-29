@@ -33,10 +33,7 @@ import {
   ExternalLink,
   ChevronRight,
   TrendingUp,
-  Wrench,
-  Repeat,
   Tag,
-  MessageSquare,
   Globe,
   Radio,
   Cpu,
@@ -285,25 +282,6 @@ export const AdminOperationsCenterView: React.FC = () => {
               </div>
             </div>
 
-            {/* Reserved Products */}
-            <div
-              onClick={() => handleCardClick('admin-products')}
-              className="p-5 rounded-2xl bg-slate-900 border border-slate-800 hover:border-amber-500/50 transition-all cursor-pointer group shadow-xl"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-bold text-slate-400">الأجهزة المحجوزة</span>
-                <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <ShoppingBag className="w-5 h-5" />
-                </div>
-              </div>
-              <div className="flex items-baseline justify-between">
-                <span className="text-2xl font-black text-amber-300">{summary.reservedProductsCount}</span>
-                <span className="text-[11px] font-bold text-amber-400 flex items-center gap-1">
-                  المخزون المحجوز <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                </span>
-              </div>
-            </div>
-
             {/* Sold Products */}
             <div
               onClick={() => handleCardClick('admin-products')}
@@ -338,63 +316,6 @@ export const AdminOperationsCenterView: React.FC = () => {
                 <span className="text-2xl font-black text-slate-300">{summary.archivedProductsCount}</span>
                 <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
                   الأرشيف <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                </span>
-              </div>
-            </div>
-
-            {/* Active Reservations */}
-            <div
-              onClick={() => handleCardClick('admin-reservations')}
-              className="p-5 rounded-2xl bg-slate-900 border border-slate-800 hover:border-blue-500/50 transition-all cursor-pointer group shadow-xl"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-bold text-slate-400">الحجوزات النشطة</span>
-                <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <ShoppingBag className="w-5 h-5" />
-                </div>
-              </div>
-              <div className="flex items-baseline justify-between">
-                <span className="text-2xl font-black text-white">{summary.activeReservationsCount}</span>
-                <span className="text-[11px] font-bold text-blue-400 flex items-center gap-1">
-                  إدارة الحجوزات <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                </span>
-              </div>
-            </div>
-
-            {/* Expiring Today */}
-            <div
-              onClick={() => handleCardClick('admin-reservations')}
-              className="p-5 rounded-2xl bg-slate-900 border border-slate-800 hover:border-rose-500/50 transition-all cursor-pointer group shadow-xl"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-bold text-slate-400">حجوزات تنتهي اليوم</span>
-                <div className="w-9 h-9 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Clock className="w-5 h-5" />
-                </div>
-              </div>
-              <div className="flex items-baseline justify-between">
-                <span className="text-2xl font-black text-rose-400">{summary.expiringTodayCount}</span>
-                <span className="text-[11px] font-bold text-rose-400 flex items-center gap-1">
-                  تأكيد أو إلغاء <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                </span>
-              </div>
-            </div>
-
-            {/* Expired Reservations */}
-            <div
-              onClick={() => handleCardClick('admin-reservations')}
-              className="p-5 rounded-2xl bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all cursor-pointer group shadow-xl"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-bold text-slate-400">حجوزات منتهية</span>
-                <div className="w-9 h-9 rounded-xl bg-slate-800 text-slate-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <AlertTriangle className="w-5 h-5" />
-                </div>
-              </div>
-              <div className="flex items-baseline justify-between">
-                <span className="text-2xl font-black text-slate-400">{summary.expiredReservationsCount}</span>
-                <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
-                  إلغاء التجميد <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                 </span>
               </div>
             </div>
@@ -523,44 +444,6 @@ export const AdminOperationsCenterView: React.FC = () => {
               </div>
             </div>
 
-            {/* Repair Requests */}
-            <div
-              onClick={() => handleCardClick('admin-customers')}
-              className="p-5 rounded-2xl bg-slate-900 border border-slate-800 hover:border-blue-500/50 transition-all cursor-pointer group shadow-xl"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-bold text-slate-400">طلبات الصيانة والإصلاح</span>
-                <div className="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Wrench className="w-5 h-5" />
-                </div>
-              </div>
-              <div className="flex items-baseline justify-between">
-                <span className="text-2xl font-black text-white">{summary.newRepairRequestsCount}</span>
-                <span className="text-[11px] font-bold text-indigo-400 flex items-center gap-1">
-                  مركز الصيانة <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                </span>
-              </div>
-            </div>
-
-            {/* Trade In Requests */}
-            <div
-              onClick={() => handleCardClick('admin-customers')}
-              className="p-5 rounded-2xl bg-slate-900 border border-slate-800 hover:border-purple-500/50 transition-all cursor-pointer group shadow-xl"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-bold text-slate-400">طلبات الاستبدال</span>
-                <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Repeat className="w-5 h-5" />
-                </div>
-              </div>
-              <div className="flex items-baseline justify-between">
-                <span className="text-2xl font-black text-purple-300">{summary.tradeInRequestsCount}</span>
-                <span className="text-[11px] font-bold text-purple-400 flex items-center gap-1">
-                  الاستبدال <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                </span>
-              </div>
-            </div>
-
             {/* Sell Requests */}
             <div
               onClick={() => handleCardClick('admin-customers')}
@@ -576,25 +459,6 @@ export const AdminOperationsCenterView: React.FC = () => {
                 <span className="text-2xl font-black text-cyan-300">{summary.sellDeviceRequestsCount}</span>
                 <span className="text-[11px] font-bold text-cyan-400 flex items-center gap-1">
                   الشراء من العميل <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                </span>
-              </div>
-            </div>
-
-            {/* Pending Negotiations */}
-            <div
-              onClick={() => handleCardClick('admin-ai')}
-              className="p-5 rounded-2xl bg-slate-900 border border-slate-800 hover:border-amber-500/50 transition-all cursor-pointer group shadow-xl"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-bold text-slate-400">المفاوضات المعلقة</span>
-                <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <MessageSquare className="w-5 h-5" />
-                </div>
-              </div>
-              <div className="flex items-baseline justify-between">
-                <span className="text-2xl font-black text-amber-300">{summary.pendingNegotiationsCount}</span>
-                <span className="text-[11px] font-bold text-amber-400 flex items-center gap-1">
-                  مركز الذكاء والمفاوضة <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                 </span>
               </div>
             </div>
@@ -831,9 +695,9 @@ export const AdminOperationsCenterView: React.FC = () => {
           <div className="space-y-3">
             {[
               {
-                title: 'تنبيه انتهاء حجز قريب',
-                message: 'الحجز رقم RES-9821 للعميل أحمد محمود سينتهي خلال ساعتين',
-                category: 'Reservations',
+                title: 'طلب شراء جديد قيد المتابعة',
+                message: 'طلب شراء رقم REQ-9821 للعميل أحمد محمود بانتظار التأكيد',
+                category: 'Orders',
                 priority: 'High',
                 time: 'منذ 10 دقائق',
               },

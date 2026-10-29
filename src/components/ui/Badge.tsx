@@ -3,7 +3,7 @@ import { ProductCondition, ProductStatus } from '../../types';
 
 export interface BadgeProps {
   children?: React.ReactNode;
-  variant?: 'new' | 'used' | 'available' | 'reserved' | 'sold' | 'info' | 'success' | 'warning' | 'danger';
+  variant?: 'new' | 'used' | 'used_warranty' | 'used_no_warranty' | 'available' | 'reserved' | 'sold' | 'info' | 'success' | 'warning' | 'danger';
   condition?: ProductCondition;
   status?: ProductStatus;
   size?: 'sm' | 'md';
@@ -21,8 +21,13 @@ export const Badge: React.FC<BadgeProps> = ({
   // Determine computed variant if condition or status passed
   let activeVariant = variant || 'info';
 
-  if (condition === 'new') activeVariant = 'new';
-  if (condition === 'used') activeVariant = 'used';
+  if (condition === 'new' || (condition as any) === 'new_in_box') {
+    activeVariant = 'new';
+  } else if (condition === 'used_warranty' || condition === 'refurbished') {
+    activeVariant = 'used_warranty';
+  } else if (condition === 'used_no_warranty' || condition === 'used') {
+    activeVariant = 'used_no_warranty';
+  }
 
   if (status === 'available') activeVariant = 'available';
   if (status === 'reserved') activeVariant = 'reserved';
@@ -38,6 +43,8 @@ export const Badge: React.FC<BadgeProps> = ({
   const variantStyles = {
     new: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30',
     used: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30',
+    used_warranty: 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 font-bold',
+    used_no_warranty: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-bold',
     available: 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30',
     reserved: 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30',
     sold: 'bg-slate-500/15 text-slate-700 dark:text-slate-400 border border-slate-500/30 line-through',
@@ -50,8 +57,10 @@ export const Badge: React.FC<BadgeProps> = ({
   // Default labels if children not explicitly provided
   let label = children;
   if (!label) {
-    if (condition === 'new') label = 'جديد بالضمان';
-    else if (condition === 'used') label = 'مستعمل ممتاز';
+    if (condition === 'new' || (condition as any) === 'new_in_box') label = 'جديد';
+    else if (condition === 'used_warranty') label = 'مستعمل بضمان الشركة';
+    else if (condition === 'refurbished') label = 'مستعمل بضمان الشركة';
+    else if (condition === 'used_no_warranty' || condition === 'used') label = 'مستعمل بدون ضمان';
     else if (status === 'available') label = 'متاح بالمعرض';
     else if (status === 'reserved') label = 'محجوز';
     else if (status === 'sold') label = 'تم البيع';

@@ -7,7 +7,6 @@ import {
   Filter,
   UserCheck,
   Package,
-  ShoppingBag,
   CreditCard,
   FileText,
   Sparkles,
@@ -59,8 +58,6 @@ export const AdminActivityTimelineModal: React.FC<AdminActivityTimelineModalProp
         return <UserCheck className="w-4 h-4 text-blue-400" />;
       case 'product_change':
         return <Package className="w-4 h-4 text-emerald-400" />;
-      case 'reservation_update':
-        return <ShoppingBag className="w-4 h-4 text-amber-400" />;
       case 'payment_update':
         return <CreditCard className="w-4 h-4 text-cyan-400" />;
       case 'invoice_creation':
@@ -71,6 +68,8 @@ export const AdminActivityTimelineModal: React.FC<AdminActivityTimelineModalProp
         return <ShieldAlert className="w-4 h-4 text-rose-400" />;
       case 'customer_action':
         return <Globe className="w-4 h-4 text-blue-300" />;
+      default:
+        return <Package className="w-4 h-4 text-slate-400" />;
     }
   };
 

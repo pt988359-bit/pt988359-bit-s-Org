@@ -96,26 +96,6 @@ export const PortalSettingsView: React.FC<PortalSettingsViewProps> = ({ session 
             <label className="flex items-center gap-3 cursor-pointer">
               <input
                 type="checkbox"
-                checked={settings.notificationPreferences.reservationAlerts}
-                onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    notificationPreferences: {
-                      ...settings.notificationPreferences,
-                      reservationAlerts: e.target.checked,
-                    },
-                  })
-                }
-                className="w-4 h-4 rounded text-blue-600"
-              />
-              <span className="text-slate-700 dark:text-slate-300">تنبيهات حالة وقرب انتهاء مهلة الحجز</span>
-            </label>
-
-
-
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
                 checked={settings.notificationPreferences.warrantyReminders}
                 onChange={(e) =>
                   setSettings({

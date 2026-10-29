@@ -1,6 +1,7 @@
 import React from 'react';
 import { useShowroom } from '../../context/ShowroomContext';
 import { Card, CardBody } from '../ui/Card';
+import { getCategoryCover, generateCategoryCoverSvg } from '../../utils/categoryVisuals';
 import {
   Refrigerator,
   WashingMachine,
@@ -8,6 +9,7 @@ import {
   Wind,
   Flame,
   Coffee,
+  Microwave,
   Package,
   ArrowLeft,
   CheckCircle2,
@@ -20,14 +22,17 @@ const iconMap: Record<string, React.ReactNode> = {
   Wind: <Wind className="w-8 h-8 text-sky-600 dark:text-sky-400" />,
   Flame: <Flame className="w-8 h-8 text-amber-600 dark:text-amber-400" />,
   Coffee: <Coffee className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />,
+  Microwave: <Microwave className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />,
 };
 
 export const CategoriesPage: React.FC = () => {
   const { categories, products, navigateTo, setSelectedCategory } = useShowroom();
 
   const handleCategoryClick = (catId: string) => {
-    setSelectedCategory(catId);
-    navigateTo('products');
+    if (typeof setSelectedCategory === 'function') {
+      setSelectedCategory(catId);
+    }
+    navigateTo('products', { categoryId: catId });
   };
 
   return (
@@ -41,7 +46,7 @@ export const CategoriesPage: React.FC = () => {
           تصفح أجهزة معرض PRO TECK حسب القسم
         </h1>
         <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base leading-relaxed">
-          نقدم لكم أحدث الأجهزة المنزلية بفرع المعادي شارع 68، مفحوصة بالكامل مع ضمان معتمد وخيارات الحجز أونلاين.
+          نقدم لكم أحدث الأجهزة المنزلية بفرع المعادي شارع 68، مفحوصة بالكامل مع ضمان معتمد وخيارات طلب الشراء أونلاين.
         </p>
       </div>
 
@@ -59,8 +64,15 @@ export const CategoriesPage: React.FC = () => {
             >
               <div className="relative h-48 w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
                 <img
-                  src={cat.coverImage || 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=800&q=80'}
+                  src={getCategoryCover(cat)}
                   alt={cat.name}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = generateCategoryCoverSvg(
+                      cat.iconName,
+                      cat.name,
+                      cat.slug
+                    );
+                  }}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent" />

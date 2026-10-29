@@ -29,7 +29,6 @@ export const Header: React.FC = () => {
     currentRoute,
     navigateTo,
     settings,
-    cart,
     searchQuery,
     setSearchQuery,
   } = useShowroom();
@@ -253,26 +252,12 @@ export const Header: React.FC = () => {
             <button
               onClick={() => openLoginModal()}
               className="px-2.5 sm:px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-blue-600/20 cursor-pointer shrink-0"
-              title="تسجيل الدخول لتتبع الطلبات وإجراء الحجوزات"
+              title="تسجيل الدخول لتتبع الطلبات"
             >
               <User className="w-4 h-4" />
               <span className="hidden sm:inline">تسجيل الدخول</span>
             </button>
           )}
-
-          {/* Reservation Cart Button */}
-          <button
-            onClick={() => handleNav('reservation')}
-            className="relative p-2 sm:p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 transition-colors cursor-pointer shrink-0"
-            title="سلة الحجوزات"
-          >
-            <ShoppingBag className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            {cart.length > 0 && (
-              <span className="absolute -top-1 -left-1 w-5 h-5 rounded-full bg-rose-600 text-white font-bold text-[10px] flex items-center justify-center animate-bounce">
-                {cart.length}
-              </span>
-            )}
-          </button>
 
           {/* Mobile Menu Trigger */}
           <button

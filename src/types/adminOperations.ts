@@ -23,7 +23,6 @@ export interface OperationsSummary {
   cashBalanceAmount: number;
 
   // Customer Services
-  newRepairRequestsCount: number;
   tradeInRequestsCount: number;
   sellDeviceRequestsCount: number;
 

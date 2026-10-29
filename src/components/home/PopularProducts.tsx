@@ -1,19 +1,24 @@
 import React from 'react';
-import { Eye, Flame, ArrowLeft, ShoppingBag } from 'lucide-react';
+import { Eye, Flame, ArrowLeft } from 'lucide-react';
 import { Product } from '../../types';
 import { useShowroom } from '../../context/ShowroomContext';
+import { DEFAULT_PRODUCT_PLACEHOLDER } from '../../constants/placeholders';
 
 interface PopularProductsProps {
   onQuickView: (product: Product) => void;
 }
 
 export const PopularProducts: React.FC<PopularProductsProps> = ({ onQuickView }) => {
-  const { products, isLoadingProducts, navigateTo, addToCart } = useShowroom();
+  const { products, isLoadingProducts, navigateTo } = useShowroom();
 
-  // Sort by viewsCount descending or fallback
+  // Sort by isFeatured first, then newest (createdAt descending)
   const popularProducts = [...products]
     .filter(p => p.status === 'available' || p.availabilityStatus === 'available')
-    .sort((a, b) => (b.viewsCount || 0) - (a.viewsCount || 0))
+    .sort((a, b) => {
+      if (a.isFeatured && !b.isFeatured) return -1;
+      if (!a.isFeatured && b.isFeatured) return 1;
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    })
     .slice(0, 4);
 
   return (
@@ -52,19 +57,20 @@ export const PopularProducts: React.FC<PopularProductsProps> = ({ onQuickView })
             key={product.id}
             className="group relative bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 shadow-xs hover:shadow-xl hover:border-amber-300 dark:hover:border-amber-800 transition-all duration-300 flex flex-col justify-between"
           >
-            {/* Views Popularity Indicator Badge */}
-            <div className="flex items-center justify-between mb-3">
-              <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1.5">
-                <Flame className="w-3.5 h-3.5 fill-amber-500 text-amber-500 animate-pulse" />
-                <span>شاهده {(product.viewsCount || 1200).toLocaleString('ar-EG')} عميل</span>
-              </span>
-
-              <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+            {/* Product Badges */}
+            <div className="flex items-center justify-end mb-3">
+              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                 product.condition === 'new'
-                  ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400'
-                  : 'bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400'
+                  ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                  : product.condition === 'used_warranty' || product.condition === 'refurbished'
+                  ? 'bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400 border border-blue-200 dark:border-blue-800'
+                  : 'bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
               }`}>
-                {product.condition === 'new' ? 'جديد' : 'مستعمل'}
+                {product.condition === 'new'
+                  ? 'جديد'
+                  : product.condition === 'used_warranty' || product.condition === 'refurbished'
+                  ? 'مستعمل بضمان الشركة'
+                  : 'مستعمل بدون ضمان'}
               </span>
             </div>
 
@@ -74,8 +80,11 @@ export const PopularProducts: React.FC<PopularProductsProps> = ({ onQuickView })
               className="relative w-full h-48 bg-slate-50 dark:bg-slate-950 rounded-2xl overflow-hidden mb-4 flex items-center justify-center p-4 cursor-pointer"
             >
               <img
-                src={product.images?.[0] || 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=800&q=80'}
+                src={product.images?.[0] || DEFAULT_PRODUCT_PLACEHOLDER}
                 alt={product.title}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = DEFAULT_PRODUCT_PLACEHOLDER;
+                }}
                 className="max-h-40 object-contain group-hover:scale-105 transition-transform duration-300"
               />
             </div>
@@ -114,14 +123,10 @@ export const PopularProducts: React.FC<PopularProductsProps> = ({ onQuickView })
                   <span>معاينة</span>
                 </button>
                 <button
-                  onClick={() => {
-                    addToCart(product);
-                    navigateTo('reservation');
-                  }}
+                  onClick={() => navigateTo('product-detail', { productId: product.id })}
                   className="py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-sm cursor-pointer"
                 >
-                  <ShoppingBag className="w-3.5 h-3.5" />
-                  <span>حجز</span>
+                  <span>التفاصيل</span>
                 </button>
               </div>
             </div>

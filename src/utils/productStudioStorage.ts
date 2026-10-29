@@ -4,7 +4,8 @@ import {
   ProductLifecycleStage,
 } from '../types/productStudio';
 import { ProductStatus } from '../types/index';
-import { defaultStorageAdapter } from '../core/storage/LocalStorageAdapter';
+import { firestoreStorageAdapter } from '../core/storage/FirestoreStorageAdapter';
+import { defaultProductRepository } from '../core/repositories/ProductRepository';
 import { LoggerService } from '../core/services/LoggerService';
 import { AdminSessionService } from '../core/services/AdminSessionService';
 import { setDocData, updateDocData, deleteDocData } from '../firebase/firestore';
@@ -193,7 +194,14 @@ const STORAGE_KEY = 'proteck_enriched_products';
 
 export function getStoredEnrichedProducts(): EnrichedProduct[] {
   try {
-    const parsed = defaultStorageAdapter.getItem<EnrichedProduct[]>(STORAGE_KEY);
+    const repoItems = defaultProductRepository.getAll() as EnrichedProduct[];
+    if (repoItems && repoItems.length > 0) {
+      return repoItems.map((p) => ({
+        ...p,
+        images: Array.isArray(p.images) ? p.images : (p.images ? [p.images] : []),
+      }));
+    }
+    const parsed = firestoreStorageAdapter.getItem<EnrichedProduct[]>(STORAGE_KEY);
     if (!parsed || !Array.isArray(parsed)) return [];
     return parsed.map((p) => ({
       ...p,
@@ -207,10 +215,42 @@ export function getStoredEnrichedProducts(): EnrichedProduct[] {
 
 export function saveEnrichedProducts(products: EnrichedProduct[]): void {
   try {
-    if (!products || products.length === 0) {
+    if (!products) {
       return;
     }
-    defaultStorageAdapter.setItem(STORAGE_KEY, products);
+
+    if (products.length === 0) {
+      try {
+        firestoreStorageAdapter.setItem(STORAGE_KEY, []);
+      } catch (storageErr) {
+        LoggerService.warn('productStudioStorage', 'StorageAdapter setItem warning', storageErr);
+      }
+      return;
+    }
+
+    // Create a lightweight copy of products without Base64 images to prevent QuotaExceededError in local cache
+    const lightweightProducts: EnrichedProduct[] = products.map((product) => {
+      let cleanedImages: string[] = [];
+      const rawImages: unknown = product.images;
+      if (Array.isArray(rawImages)) {
+        cleanedImages = rawImages.filter(
+          (img: unknown): img is string => typeof img === 'string' && !img.startsWith('data:image')
+        );
+      } else if (typeof rawImages === 'string') {
+        cleanedImages = rawImages.startsWith('data:image') ? [] : [rawImages];
+      }
+
+      return {
+        ...product,
+        images: cleanedImages,
+      };
+    });
+
+    try {
+      firestoreStorageAdapter.setItem(STORAGE_KEY, lightweightProducts);
+    } catch (storageErr) {
+      LoggerService.warn('productStudioStorage', 'StorageAdapter setItem warning', storageErr);
+    }
   } catch (err) {
     LoggerService.error('productStudioStorage', 'Error saving enriched products to storage', err);
   }
@@ -304,6 +344,10 @@ export async function updateProductFields(
     updatedAt: normalizedUpdates.updatedAt || new Date().toISOString(),
   } as EnrichedProduct;
 
+  if ('soldAt' in updates && updates.soldAt === undefined) {
+    delete fullProduct.soldAt;
+  }
+
   // Also update local storage cache with the merged product so subsequent operations have fresh data
   if (storedList.length > 0) {
     const updatedList = storedProduct
@@ -378,6 +422,20 @@ export async function deleteEnrichedProductFromFirestore(id: string, imageUrls?:
     }
   } catch (syncErr: any) {
     console.warn(`[ShowroomContext/ProductStudio] [SUPABASE DELETE SYNC ERROR] Network error deleting product ${id} from Supabase:`, syncErr?.message || syncErr);
+  }
+
+  // 3. Local Storage Cache Cleanup (Ensure local copy is removed permanently)
+  try {
+    const currentList = getStoredEnrichedProducts();
+    const updatedList = currentList.filter((p) => p.id !== id);
+    saveEnrichedProducts(updatedList);
+    try {
+      defaultProductRepository.remove(id).catch(() => {});
+    } catch {
+      // Non-blocking
+    }
+  } catch (localErr) {
+    LoggerService.warn('productStudioStorage', `Error removing product ${id} from local cache`, localErr);
   }
 }
 

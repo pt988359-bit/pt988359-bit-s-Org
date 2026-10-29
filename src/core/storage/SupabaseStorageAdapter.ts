@@ -20,12 +20,18 @@ export type StorageMode = 'local' | 'supabase';
  * All other properties are safely stored in the `data` jsonb column.
  */
 const TABLE_TYPED_COLUMNS: Record<string, Set<string>> = {
+  customer_requests: new Set([
+    'id', 'reference_number', 'type', 'customer', 'product_id', 'product_title',
+    'product_price', 'final_price', 'product_image', 'status', 'priority',
+    'details', 'audit_trail', 'internal_notes', 'admin_notes',
+    'created_at', 'updated_at',
+  ]),
   products: new Set([
     'id', 'title', 'brand', 'model', 'category_id', 'category', 'price',
     'original_price', 'min_negotiation_price', 'is_negotiable', 'condition',
     'status', 'availability_status', 'lifecycle_stage', 'is_published',
     'is_archived', 'is_featured', 'showroom_location', 'qr_code', 'barcode',
-    'views_count', 'reservations_count', 'purchase_requests_count', 'negotiations_count',
+    'purchase_requests_count', 'negotiations_count',
     'created_at', 'updated_at',
   ]),
   categories: new Set([
@@ -240,6 +246,22 @@ export function mapItemToPostgresRow(tableName: string, item: any): Record<strin
     row.updated_at = new Date().toISOString();
   }
 
+  // Ensure JSONB columns for customer_requests are valid JSON structures
+  if (tableName === 'customer_requests') {
+    if (!row.customer || typeof row.customer !== 'object') {
+      row.customer = typeof item.customer === 'object' && item.customer !== null ? item.customer : {};
+    }
+    if (!Array.isArray(row.audit_trail)) {
+      row.audit_trail = Array.isArray(item.auditTrail || item.audit_trail) ? (item.auditTrail || item.audit_trail) : [];
+    }
+    if (!row.details || typeof row.details !== 'object') {
+      row.details = typeof item.details === 'object' && item.details !== null ? item.details : {};
+    }
+    if (!row.type) {
+      row.type = item.type || 'purchase';
+    }
+  }
+
   row.data = remainingData;
   return row;
 }
@@ -297,7 +319,7 @@ export class SupabaseStorageAdapter implements StorageAdapter {
 
   private get fallbackAdapter(): LocalStorageAdapter {
     if (!this._fallbackAdapter) {
-      this._fallbackAdapter = new LocalStorageAdapter();
+      this._fallbackAdapter = new LocalStorageAdapter({ suppressQuotaToast: true });
     }
     return this._fallbackAdapter;
   }

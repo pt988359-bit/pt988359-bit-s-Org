@@ -5,13 +5,14 @@
 
 import { BaseRepository } from './BaseRepository';
 import { StorageAdapter } from '../storage/StorageAdapter';
-import { defaultStorageAdapter } from '../storage/LocalStorageAdapter';
+import { firestoreStorageAdapter } from '../storage/FirestoreStorageAdapter';
 import { CashLedgerEntry } from '../../types/adminFinance';
+import { FIRESTORE_COLLECTIONS } from '../config/FirestoreConfig';
 
-const CASH_LEDGER_KEY = 'proteck_admin_cash_ledger_v1';
+const CASH_LEDGER_KEY = FIRESTORE_COLLECTIONS.CASH_LEDGERS;
 
 export class CashLedgerRepository extends BaseRepository<CashLedgerEntry> {
-  constructor(storage: StorageAdapter = defaultStorageAdapter) {
+  constructor(storage: StorageAdapter = firestoreStorageAdapter) {
     super(CASH_LEDGER_KEY, storage);
   }
 
@@ -20,7 +21,9 @@ export class CashLedgerRepository extends BaseRepository<CashLedgerEntry> {
   }
 
   public getLatestRunningBalance(): number {
-    const entries = this.getActiveEntries();
+    const entries = this.getActiveEntries()
+      .slice()
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     return entries.length > 0 ? entries[0].runningBalance : 0;
   }
 }

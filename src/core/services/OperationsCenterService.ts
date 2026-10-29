@@ -1,4 +1,5 @@
 import { Product, Reservation, Order, Category, Brand, TradeRequest, SellRequest, ShowroomSettings } from '../../types';
+import { DEFAULT_PRODUCT_PLACEHOLDER } from '../../constants/placeholders';
 import {
   OperationsSummary,
   SystemHealthItem,
@@ -11,6 +12,7 @@ import {
 import { db } from '../../firebase/firestore';
 import { auth } from '../../firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
+import { defaultCashLedgerRepository } from '../repositories/CashLedgerRepository';
 
 const AUDIT_STORAGE_KEY = 'proteck_erp_audit_logs';
 
@@ -88,11 +90,15 @@ export class OperationsCenterService {
       .reduce((sum, p) => sum + p.price, 0);
 
     const netProfitAmount = Math.max(0, totalSoldRevenue - soldProductsCost);
-    const expensesAmount = Math.round(soldProductsCost * 0.15 + 12500); // Fixed & variable overheads
-    const cashBalanceAmount = Math.max(150000, totalSoldRevenue - expensesAmount + 85000);
+
+    // Real financial data from cash ledger
+    const activeCashEntries = defaultCashLedgerRepository.getActiveEntries();
+    const expensesAmount = activeCashEntries
+      .filter((e) => e.type === 'money_out')
+      .reduce((sum, e) => sum + (e.amount || 0), 0);
+    const cashBalanceAmount = defaultCashLedgerRepository.getLatestRunningBalance();
 
     // Customer Services
-    const newRepairRequestsCount = 3; // Active repair tickets in service hub
     const tradeInRequestsCount = tradeRequests.filter((t) => t.status === 'new').length;
     const sellDeviceRequestsCount = sellRequests.filter((s) => s.status === 'new').length;
 
@@ -116,7 +122,6 @@ export class OperationsCenterService {
       netProfitAmount,
       expensesAmount,
       cashBalanceAmount,
-      newRepairRequestsCount,
       tradeInRequestsCount,
       sellDeviceRequestsCount,
       pendingNegotiationsCount,
@@ -280,7 +285,7 @@ export class OperationsCenterService {
       id: `file-${idx}`,
       name: `صورة جهاز: ${p.title.substring(0, 25)}...`,
       sizeMb: Number((0.65 + idx * 0.12).toFixed(2)),
-      url: p.images?.[0] || 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=800&q=80',
+      url: p.images?.[0] || DEFAULT_PRODUCT_PLACEHOLDER,
     }));
 
     const recentUploads = products.slice(0, 4).map((p, idx) => ({
@@ -288,7 +293,7 @@ export class OperationsCenterService {
       name: `${p.brand} - ${p.title.substring(0, 20)}`,
       sizeKb: 480 + idx * 45,
       uploadedAt: p.createdAt ? new Date(p.createdAt).toLocaleDateString('ar-EG') : 'اليوم',
-      url: p.images?.[0] || 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=800&q=80',
+      url: p.images?.[0] || DEFAULT_PRODUCT_PLACEHOLDER,
     }));
 
     return {

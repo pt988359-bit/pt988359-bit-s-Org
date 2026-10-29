@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { EnrichedProduct, StudioTabKey } from '../../../types/productStudio';
 import { Category } from '../../../types';
+import { DEFAULT_PRODUCT_PLACEHOLDER } from '../../../constants/placeholders';
 import { LIFECYCLE_STAGE_LABELS } from '../../../utils/productStudioStorage';
+import { useShowroom } from '../../../context/ShowroomContext';
 import { OverviewTab } from './workspace/tabs/OverviewTab';
 import { MediaStudioTab } from './workspace/tabs/MediaStudioTab';
 import { SpecificationsTab } from './workspace/tabs/SpecificationsTab';
@@ -9,7 +11,6 @@ import { PricingStudioTab } from './workspace/tabs/PricingStudioTab';
 import { WarrantyStudioTab } from './workspace/tabs/WarrantyStudioTab';
 import { AccessoriesStudioTab } from './workspace/tabs/AccessoriesStudioTab';
 import { InspectionStudioTab } from './workspace/tabs/InspectionStudioTab';
-import { ReservationsTab } from './workspace/tabs/ReservationsTab';
 import { PurchaseRequestsTab } from './workspace/tabs/PurchaseRequestsTab';
 import { NegotiationsTab } from './workspace/tabs/NegotiationsTab';
 import { HistoryTab } from './workspace/tabs/HistoryTab';
@@ -24,7 +25,6 @@ import {
   ShieldCheck,
   PackageCheck,
   Stethoscope,
-  Clock,
   ShoppingBag,
   History,
   Sparkles,
@@ -54,6 +54,25 @@ export const ProductWorkspaceModal: React.FC<ProductWorkspaceModalProps> = ({
   const [currentProduct, setCurrentProduct] = useState<EnrichedProduct>(product);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  const { updateProductStatus } = useShowroom();
+
+  const handleMarkAsSold = (finalPrice: number) => {
+    updateProductStatus(currentProduct.id, 'sold', finalPrice);
+    const now = new Date().toISOString();
+    const updated: EnrichedProduct = {
+      ...currentProduct,
+      status: 'sold',
+      lifecycleStage: 'sold',
+      soldAt: now,
+      finalPrice,
+      updatedAt: now,
+    };
+    setCurrentProduct(updated);
+    onSaveProduct(updated);
+    setToastMessage('تم تسجيل بيع الجهاز وتحديث حالته بنجاح');
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
   const categoryNameMap: Record<string, string> = {};
   categories.forEach((c) => {
     categoryNameMap[c.id] = c.name;
@@ -82,7 +101,6 @@ export const ProductWorkspaceModal: React.FC<ProductWorkspaceModalProps> = ({
     { key: 'warranty', label: 'الضمان المعتمد', icon: <ShieldCheck className="w-4 h-4" /> },
     { key: 'accessories', label: 'الملحقات والقطع', icon: <PackageCheck className="w-4 h-4" /> },
     { key: 'inspection', label: 'تقرير الفحص بالمعمل', icon: <Stethoscope className="w-4 h-4" /> },
-    { key: 'reservations', label: 'الحجوزات الرقمية', icon: <Clock className="w-4 h-4" />, badge: currentProduct.reservationsCount },
     { key: 'purchase_requests', label: 'طلبات المعاينة', icon: <ShoppingBag className="w-4 h-4" />, badge: currentProduct.purchaseRequestsCount },
     { key: 'negotiations', label: 'العروض والتفاوض', icon: <DollarSign className="w-4 h-4" /> },
     { key: 'history', label: 'سجل التعديلات', icon: <History className="w-4 h-4" />, badge: currentProduct.auditRecords?.length },
@@ -106,8 +124,11 @@ export const ProductWorkspaceModal: React.FC<ProductWorkspaceModalProps> = ({
         <div className="p-3.5 sm:p-5 bg-slate-950/90 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <img
-              src={currentProduct.images?.[0] || 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=200&q=80'}
+              src={currentProduct.images?.[0] || DEFAULT_PRODUCT_PLACEHOLDER}
               alt={currentProduct.title}
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = DEFAULT_PRODUCT_PLACEHOLDER;
+              }}
               className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl object-cover border border-slate-800 shrink-0"
             />
 
@@ -218,8 +239,6 @@ export const ProductWorkspaceModal: React.FC<ProductWorkspaceModalProps> = ({
             <InspectionStudioTab product={currentProduct} onUpdateProduct={handlePartialUpdate} />
           )}
 
-          {activeTab === 'reservations' && <ReservationsTab product={currentProduct} />}
-
           {activeTab === 'purchase_requests' && <PurchaseRequestsTab product={currentProduct} />}
 
           {activeTab === 'negotiations' && <NegotiationsTab product={currentProduct} />}
@@ -236,6 +255,7 @@ export const ProductWorkspaceModal: React.FC<ProductWorkspaceModalProps> = ({
               onUpdateProduct={handlePartialUpdate}
               onSoftDelete={onSoftDelete}
               onRestore={onRestore}
+              onMarkAsSold={handleMarkAsSold}
             />
           )}
         </div>

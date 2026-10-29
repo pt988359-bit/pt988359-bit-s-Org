@@ -111,15 +111,19 @@ export function startReservationExpirationCron(intervalMs = 60000) {
   console.log(`[ReservationJob] Starting server-side reservation expiration cron worker every ${intervalMs / 1000}s`);
 
   // Delay initial check by 20s so server startup is completely unblocked
-  setTimeout(() => {
-    processExpiredReservationsJob().catch((err) => {
+  setTimeout(async () => {
+    try {
+      await processExpiredReservationsJob();
+    } catch (err: any) {
       console.warn('[ReservationJob] Initial background expiration check notice:', err?.message || err);
-    });
+    }
   }, 20000);
 
-  jobInterval = setInterval(() => {
-    processExpiredReservationsJob().catch((err) => {
+  jobInterval = setInterval(async () => {
+    try {
+      await processExpiredReservationsJob();
+    } catch (err: any) {
       console.warn('[ReservationJob] Background expiration check notice:', err?.message || err);
-    });
+    }
   }, intervalMs);
 }

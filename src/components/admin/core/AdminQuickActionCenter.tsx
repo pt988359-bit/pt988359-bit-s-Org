@@ -10,7 +10,6 @@ import {
   ShoppingBag,
   Search,
   Bot,
-  Bell,
   Sparkles,
 } from 'lucide-react';
 
@@ -68,11 +67,11 @@ export const AdminQuickActionCenter: React.FC<AdminQuickActionCenterProps> = ({
     },
     {
       id: 'qa-5',
-      label: 'فتح سجل حجز عربون',
+      label: 'مركز طلبات الشراء',
       icon: <ShoppingBag className="w-4 h-4" />,
       color: 'bg-amber-600 hover:bg-amber-500 text-white',
-      route: 'admin-reservations',
-      actionId: 'open-reservation',
+      route: 'admin-orders',
+      actionId: 'open-orders',
     },
     {
       id: 'qa-6',
@@ -88,13 +87,6 @@ export const AdminQuickActionCenter: React.FC<AdminQuickActionCenterProps> = ({
       color: 'bg-indigo-600 hover:bg-indigo-500 text-white',
       route: 'admin-ai',
       actionId: 'open-ai',
-    },
-    {
-      id: 'qa-8',
-      label: 'إرسال تنبيه يدوي',
-      icon: <Bell className="w-4 h-4" />,
-      color: 'bg-rose-600 hover:bg-rose-500 text-white',
-      actionId: 'manual-notification',
     },
   ];
 

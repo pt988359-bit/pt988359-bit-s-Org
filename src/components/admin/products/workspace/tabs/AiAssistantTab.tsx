@@ -27,7 +27,7 @@ export const AiAssistantTab: React.FC<AiAssistantTabProps> = ({ product, onUpdat
     improvedTitle: `ثلاجة ${product.brand} انفرتر ${product.specs[0]?.value || ''} نوفروست فرز أول المعادي`,
     improvedDescription: `احصل على ${product.title} المفحوصة بالكامل بمختبر PRO TECK مع ضمان المعرض المعتمد. تعمل بتكنولوجيا التبريد الذكية الموفرة للكهرباء.`,
     suggestedTags: [product.brand, 'أجهزة_المعادي', 'فرز_أول', 'انفرتر', 'ضمان_المعرض'],
-    facebookPostText: `✨ جديد معروضات فرع المعادي شارع 68 ✨\n${product.title} ❄️\nالسعر: ${product.price.toLocaleString()} ج.م فقط!\nمع ضمان المعرض المعتمد وتوصيل فوري.\nاحجز لمعاينة الجهاز عبر موقعنا الرسمي.`,
+    facebookPostText: `✨ جديد معروضات فرع المعادي شارع 68 ✨\n${product.title} ❄️\nالسعر: ${product.price.toLocaleString()} ج.م فقط!\nمع ضمان المعرض المعتمد وتوصيل فوري.\nاطلب معاينة الجهاز عبر موقعنا الرسمي.`,
     whatsAppAdText: `مرحباً! ${product.title} متوفرة بفرع المعادي بسعر ${product.price.toLocaleString()} ج.م شامل الضمان. لمعاينة الجهاز اضغط هنا.`,
     seoDescriptionText: `اشتري ${product.title} بأفضل سعر في مصر من معرض المعادي شارع 68 مع ضمان 10 سنوات وتوصيل لجميع المحافظات.`,
     approvalStatus: 'pending',

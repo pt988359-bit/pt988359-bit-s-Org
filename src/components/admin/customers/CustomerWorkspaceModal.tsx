@@ -1,15 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Customer, CustomerWorkspaceTab, CustomerDocument } from '../../../types/customerHub';
-import { RequestAuditStatus } from '../../../types/customerActions';
+import { RequestAuditStatus, PurchaseRequestRecord } from '../../../types/customerActions';
 import { defaultSequenceService } from '../../../core/services/SequenceService';
 import { IdGenerator } from '../../../core/services/IdGenerator';
+import { normalizeEgyptianPhone } from '../../../utils/phoneUtils';
+import { defaultRequestRepository, UnifiedRequestType } from '../../../core/repositories/RequestRepository';
+import { getCustomerDynamicStats, normalizePhoneForMatching } from '../../../utils/customerStats';
+import { useShowroom } from '../../../context/ShowroomContext';
+import { SellDeviceRequest } from '../../../types/customerHub';
 import {
   User,
   X,
   Phone,
   MessageSquare,
   ShoppingBag,
-  BookmarkCheck,
   DollarSign,
   Percent,
   RefreshCw,
@@ -29,7 +33,6 @@ import {
 // Workspace Tabs
 import { OverviewTab } from './tabs/OverviewTab';
 import { PurchaseRequestsTab } from './tabs/PurchaseRequestsTab';
-import { ReservationsTab } from './tabs/ReservationsTab';
 import { NegotiationsTab } from './tabs/NegotiationsTab';
 
 import { SellRequestsTab } from './tabs/SellRequestsTab';
@@ -60,6 +63,67 @@ export const CustomerWorkspaceModal: React.FC<CustomerWorkspaceModalProps> = ({
   onSoftDeleteCustomer,
 }) => {
   const [activeTab, setActiveTab] = useState<CustomerWorkspaceTab>('overview');
+  const { sellRequests, updateSellRequestStatus } = useShowroom();
+
+  // Real-time synchronization with RequestRepository
+  const [repoRevision, setRepoRevision] = useState(0);
+
+  useEffect(() => {
+    const unsub = defaultRequestRepository.subscribe(() => {
+      setRepoRevision((v) => v + 1);
+    });
+    return () => unsub();
+  }, []);
+
+  // Compute totalRequests and totalPurchases dynamically at display time
+  const dynamicStats = useMemo(() => {
+    return getCustomerDynamicStats(customer.primaryPhone, customer.whatsappPhone);
+  }, [customer.primaryPhone, customer.whatsappPhone, repoRevision]);
+
+  // Customer instance decorated with dynamic runtime stats
+  const customerWithDynamicStats: Customer = useMemo(() => {
+    return {
+      ...customer,
+      totalRequests: dynamicStats.totalRequests,
+      totalPurchases: dynamicStats.totalPurchases,
+    };
+  }, [customer, dynamicStats]);
+
+  // Map sell requests dynamically for SellRequestsTab
+  const customerSellRequests: SellDeviceRequest[] = useMemo(() => {
+    const normPrimary = normalizePhoneForMatching(customer.primaryPhone);
+    const normSecondary = normalizePhoneForMatching(customer.whatsappPhone);
+
+    return (sellRequests || [])
+      .filter((s) => {
+        const normPhone = normalizePhoneForMatching(s.customerPhone);
+        const normWhatsapp = normalizePhoneForMatching(s.whatsappPhone);
+        return (
+          (Boolean(normPrimary) && (normPhone === normPrimary || normWhatsapp === normPrimary)) ||
+          (Boolean(normSecondary) && (normPhone === normSecondary || normWhatsapp === normSecondary))
+        );
+      })
+      .map((s) => ({
+        id: s.id,
+        referenceNumber: s.requestNumber || s.id,
+        customer: {
+          fullName: s.customerName,
+          phone: s.customerPhone,
+          whatsappPhone: s.whatsappPhone || s.customerPhone,
+          email: s.customerEmail,
+        },
+        deviceTitle: s.deviceName || `${s.brand} ${s.model || s.applianceType}`.trim(),
+        deviceBrand: s.brand,
+        deviceCategory: s.applianceType,
+        expectedPrice: s.askingPrice || 0,
+        condition: (s.condition as any) || 'good',
+        description: s.description || s.notes || 'طلب بيع جهاز',
+        images: s.photoUrls || [],
+        status: (s.status as RequestAuditStatus) || 'pending_verification',
+        createdAt: s.createdAt,
+        auditTrail: [],
+      }));
+  }, [sellRequests, customer.primaryPhone, customer.whatsappPhone]);
 
   // Child Modals inside Workspace
   const [previewDoc, setPreviewDoc] = useState<CustomerDocument | null>(null);
@@ -68,11 +132,10 @@ export const CustomerWorkspaceModal: React.FC<CustomerWorkspaceModalProps> = ({
   // Tabs Configuration
   const tabs: { key: CustomerWorkspaceTab; label: string; icon: React.ReactNode; badge?: number }[] = [
     { key: 'overview', label: 'نظرة عامة', icon: <User className="w-4 h-4" /> },
-    { key: 'purchase_requests', label: 'طلبات الشراء', icon: <ShoppingBag className="w-4 h-4" />, badge: customer.totalPurchases },
-    { key: 'reservations', label: 'الحجوزات', icon: <BookmarkCheck className="w-4 h-4" />, badge: customer.totalReservations },
+    { key: 'purchase_requests', label: 'طلبات الشراء', icon: <ShoppingBag className="w-4 h-4" />, badge: dynamicStats.totalPurchases },
     { key: 'negotiations', label: 'التفاوض', icon: <Percent className="w-4 h-4" /> },
 
-    { key: 'sell_requests', label: 'بيع جهاز للشركة', icon: <RefreshCw className="w-4 h-4" /> },
+    { key: 'sell_requests', label: 'بيع جهاز للشركة', icon: <RefreshCw className="w-4 h-4" />, badge: customerSellRequests.length > 0 ? customerSellRequests.length : undefined },
     { key: 'exchange_requests', label: 'طلب استبدال', icon: <Repeat className="w-4 h-4" /> },
     { key: 'invoices', label: 'الفواتير', icon: <FileText className="w-4 h-4" /> },
     { key: 'visited_products', label: 'الأجهزة المعاينة', icon: <Eye className="w-4 h-4" />, badge: customer.visitedProducts.length },
@@ -123,7 +186,41 @@ export const CustomerWorkspaceModal: React.FC<CustomerWorkspaceModalProps> = ({
     });
   };
 
-  const handleCreateRequest = (type: string, payload: any) => {
+  const handleCreateRequest = async (type: string, payload: any) => {
+    const referenceNumber = await defaultSequenceService.generateNextReference('purchase');
+
+    const reqType: UnifiedRequestType =
+      type === 'sell' ? 'sell_device' :
+      type === 'exchange' ? 'trade_in' :
+      type === 'negotiation' ? 'negotiation' : 'purchase';
+
+    // Persist real request in defaultRequestRepository linked to customer phone
+    defaultRequestRepository.createRequest({
+      referenceNumber,
+      type: reqType,
+      customer: {
+        fullName: customer.fullName,
+        phone: customer.primaryPhone,
+        whatsappPhone: customer.whatsappPhone || customer.primaryPhone,
+        email: customer.email,
+        governorate: customer.address?.governorate,
+        cityArea: customer.address?.cityArea,
+      },
+      productId: payload.product?.id || `prod-${Date.now()}`,
+      productTitle: payload.productTitle || payload.product?.title || payload.deviceTitle || payload.oldDeviceTitle || 'منتج بالمعرض',
+      productPrice: payload.price || payload.product?.price || payload.expectedPrice || 0,
+      status: 'pending_approval',
+      priority: 'high',
+      auditTrail: [
+        {
+          timestamp: new Date().toISOString(),
+          status: 'pending_approval',
+          note: `تم إنشاء الطلب (${type}) عبر لوحة إدارة المعرض`,
+          actor: 'Showroom Admin',
+        },
+      ],
+    });
+
     // Add timeline log for request creation
     const newTimelineEvent = {
       id: IdGenerator.generateUniqueId('tl'),
@@ -132,15 +229,35 @@ export const CustomerWorkspaceModal: React.FC<CustomerWorkspaceModalProps> = ({
       eventType: 'purchase_approved' as any,
       title: `إصدار طلب جديد (${type.toUpperCase()})`,
       description: `تم إضافة طلب جديد لـ ${customer.fullName} بقيمة ${payload.price || payload.totalProductPrice || 0} ج.م`,
-      referenceNumber: defaultSequenceService.generateNextReference('purchase'),
+      referenceNumber,
       productTitle: payload.productTitle || payload.product?.title,
     };
 
     onUpdateCustomer({
-      totalRequests: customer.totalRequests + 1,
       timeline: [newTimelineEvent, ...customer.timeline],
     });
+    setRepoRevision((v) => v + 1);
   };
+
+  // Map purchase requests dynamically for PurchaseRequestsTab
+  const customerPurchaseRecords: PurchaseRequestRecord[] = useMemo(() => {
+    return dynamicStats.purchaseRequests.map((r) => ({
+      id: r.id,
+      referenceNumber: r.referenceNumber,
+      product: {
+        id: r.productId || 'prod-1',
+        title: r.productTitle || 'منتج بالمعرض',
+        brand: 'PRO TECK',
+        price: r.productPrice || 0,
+        condition: 'certified_refurbished',
+        image: r.productImage || '',
+      },
+      customer: r.customer,
+      status: (r.status as RequestAuditStatus) || 'pending_approval',
+      createdAt: r.createdAt,
+      auditTrail: r.auditTrail || [],
+    }));
+  }, [dynamicStats.purchaseRequests]);
 
   return (
     <div className="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 dir-rtl text-xs">
@@ -170,7 +287,7 @@ export const CustomerWorkspaceModal: React.FC<CustomerWorkspaceModalProps> = ({
                 </select>
               </div>
               <p className="text-slate-400 text-[11px] mt-0.5">
-                {customer.address.cityArea} - {customer.address.governorate} | المتابعة مع:{' '}
+                {customer.address?.cityArea || 'غير محدد'}{customer.address?.governorate ? ` - ${customer.address.governorate}` : ''} | المتابعة مع:{' '}
                 <strong className="text-slate-200">{customer.assignedAdmin || 'غير معين'}</strong>
               </p>
             </div>
@@ -179,7 +296,7 @@ export const CustomerWorkspaceModal: React.FC<CustomerWorkspaceModalProps> = ({
           {/* Quick Header Buttons */}
           <div className="flex items-center gap-2 flex-wrap">
             <a
-              href={`https://wa.me/${customer.whatsappPhone}`}
+              href={`https://wa.me/${normalizeEgyptianPhone(customer.whatsappPhone || '')}`}
               target="_blank"
               rel="noreferrer"
               className="px-3.5 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 font-extrabold flex items-center gap-1.5 transition-all cursor-pointer"
@@ -248,7 +365,7 @@ export const CustomerWorkspaceModal: React.FC<CustomerWorkspaceModalProps> = ({
         <div className="flex-1 p-6 overflow-y-auto bg-slate-950/40">
           {activeTab === 'overview' && (
             <OverviewTab
-              customer={customer}
+              customer={customerWithDynamicStats}
               onUpdateCustomer={onUpdateCustomer}
               onNavigateTab={(k) => setActiveTab(k)}
             />
@@ -256,18 +373,12 @@ export const CustomerWorkspaceModal: React.FC<CustomerWorkspaceModalProps> = ({
 
           {activeTab === 'purchase_requests' && (
             <PurchaseRequestsTab
-              customer={customer}
-              requests={[]}
-              onUpdateRequestStatus={() => {}}
-              onCreateNewRequest={() => setShowCreateRequestModal(true)}
-            />
-          )}
-
-          {activeTab === 'reservations' && (
-            <ReservationsTab
-              customer={customer}
-              reservations={[]}
-              onUpdateRequestStatus={() => {}}
+              customer={customerWithDynamicStats}
+              requests={customerPurchaseRecords}
+              onUpdateRequestStatus={(reqId, newStatus) => {
+                defaultRequestRepository.updateStatus(reqId, newStatus as any);
+                setRepoRevision((v) => v + 1);
+              }}
               onCreateNewRequest={() => setShowCreateRequestModal(true)}
             />
           )}
@@ -285,8 +396,10 @@ export const CustomerWorkspaceModal: React.FC<CustomerWorkspaceModalProps> = ({
           {activeTab === 'sell_requests' && (
             <SellRequestsTab
               customer={customer}
-              sellRequests={[]}
-              onUpdateRequestStatus={() => {}}
+              sellRequests={customerSellRequests}
+              onUpdateRequestStatus={(requestId, newStatus) => {
+                updateSellRequestStatus(requestId, newStatus as any);
+              }}
               onCreateNewRequest={() => setShowCreateRequestModal(true)}
             />
           )}
@@ -331,7 +444,7 @@ export const CustomerWorkspaceModal: React.FC<CustomerWorkspaceModalProps> = ({
 
           {activeTab === 'ai_assistant' && (
             <AiAssistantTab
-              customer={customer}
+              customer={customerWithDynamicStats}
               onAddNoteFromAi={(txt) => handleAddNote(txt, false)}
             />
           )}

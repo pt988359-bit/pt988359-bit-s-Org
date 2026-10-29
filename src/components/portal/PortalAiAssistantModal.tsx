@@ -48,12 +48,10 @@ export const PortalAiAssistantModal: React.FC<PortalAiAssistantModalProps> = ({
 
       if (q.includes('ضمان') || q.includes('تأمين')) {
         aiResponse = `بناءً على سجلات حسابك (${phoneNumber})، يسري ضمان المعرض لمدة 12 شهراً كاملاً من تاريخ الفاتورة الرسمية. يتضمن الضمان تغطية عيوب التصنيع والمكونات الفنية الداخلية، مع خيار الاستبدال خلال 14 يوماً من تاريخ الاستلام في حال العيوب المصنعية غير القابلة للإصلاح.`;
-      } else if (q.includes('حجز')) {
-        aiResponse = `لديك حالياً (${summaryData?.reservations?.length || 0}) حجز نشط. بمجرد تأكيد الطلب، يتم حفظ الحجز وتخصيص الجهاز باسمك بالمعرض لمدة 24 ساعة للمعاينة والاستلام. يمكنك معاينة الجهاز وتجربته فنياً بفرع المعادي (شارع 68) قبل السداد.`;
       } else if (q.includes('فاتورة') || q.includes('إيصال')) {
         aiResponse = `يمكنك معاينة وطباعة كافة الفواتير وإيصالات الاستلام المعتمدة مباشرة عبر تبويب "مستنداتي" في القائمة الجانبية. جميع المستندات موثقة ومزودة برقم مرجعي إلكتروني.`;
       } else if (q.includes('ملخص') || q.includes('طلباتي')) {
-        aiResponse = `ملخص نشاطك في المعرض:\n• عدد طلبات الشراء: ${summaryData?.purchaseRequests?.length || 0}\n• عدد الحجوزات النشطة: ${summaryData?.reservations?.length || 0}\n• الأجهزة المشتراة والمضمونة: ${summaryData?.completedSales?.length || 0}\nجميع بياناتك آمنة ومحفوظة برقم هاتفك المسجل.`;
+        aiResponse = `ملخص نشاطك في المعرض:\n• عدد طلبات الشراء: ${summaryData?.purchaseRequests?.length || 0}\n• الأجهزة المشتراة والمضمونة: ${summaryData?.completedSales?.length || 0}\nجميع بياناتك آمنة ومحفوظة برقم هاتفك المسجل.`;
       } else {
         aiResponse = `شكراً لتواصلك! تم تدوين استفسارك. يسعدنا إفادتك بأن إدارة معرض PRO TECK بالمعادي مجهزة لتزويدك بكافة التفاصيل الفنية. يمكنك متابعة حالة طلبك أو التواصل المباشر مع مبيعات المعرض عبر قسم الدعم الفني.`;
       }
@@ -120,10 +118,10 @@ export const PortalAiAssistantModal: React.FC<PortalAiAssistantModalProps> = ({
             🛡️ شروط الضمان
           </button>
           <button
-            onClick={() => handleSend('كيف يمكنني طباعة الفواتير وإيصالات الحجز؟')}
+            onClick={() => handleSend('كيف يمكنني طباعة الفواتير وشهادات الضمان؟')}
             className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-blue-500 text-slate-700 dark:text-slate-200 shrink-0 cursor-pointer font-medium"
           >
-            🧾 طباعة الفواتير
+            🧾 طباعة الفواتير والضمان
           </button>
         </div>
 

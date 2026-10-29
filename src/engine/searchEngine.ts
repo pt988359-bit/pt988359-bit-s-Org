@@ -13,7 +13,7 @@ export interface ProductSearchFilters {
   minConditionRating?: number;
   minHealthScore?: number;
   tags?: string[];
-  sortBy?: 'newest' | 'price_asc' | 'price_desc' | 'views' | 'health_score' | 'discount';
+  sortBy?: 'newest' | 'price_asc' | 'price_desc' | 'health_score' | 'discount';
 }
 
 /**
@@ -109,8 +109,6 @@ export function searchProducts(products: Product[], filters: ProductSearchFilter
           return a.price - b.price;
         case 'price_desc':
           return b.price - a.price;
-        case 'views':
-          return (b.viewsCount || 0) - (a.viewsCount || 0);
         case 'health_score':
           return (b.healthScores?.overallScore || 0) - (a.healthScores?.overallScore || 0);
         case 'discount': {
@@ -204,6 +202,10 @@ export function getRecentlyViewedProducts(productIds: string[], allProducts: Pro
 export function getCustomersMayLikeProducts(currentProduct: Product, allProducts: Product[], limit = 4): Product[] {
   return allProducts
     .filter((p) => p.id !== currentProduct.id && p.categoryId !== currentProduct.categoryId && p.status === 'available')
-    .sort((a, b) => (b.viewsCount || 0) - (a.viewsCount || 0))
+    .sort((a, b) => {
+      if (a.isFeatured && !b.isFeatured) return -1;
+      if (!a.isFeatured && b.isFeatured) return 1;
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    })
     .slice(0, limit);
 }

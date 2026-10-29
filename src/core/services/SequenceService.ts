@@ -16,9 +16,9 @@ export class SequenceService {
   /**
    * Generates the next atomic sequence number for a given prefix key or string
    */
-  public getNextSequence(prefixKey: ReferencePrefix | string): number {
+  public async getNextSequence(prefixKey: ReferencePrefix | string): Promise<number> {
     const rawPrefix = APP_CONFIG.prefixes[prefixKey as ReferencePrefix] || prefixKey;
-    const nextVal = this.sequenceRepo.incrementCounter(rawPrefix);
+    const nextVal = await this.sequenceRepo.incrementCounter(rawPrefix);
     LoggerService.debug('SequenceService', `Generated next sequence [${rawPrefix}]: ${nextVal}`);
     return nextVal;
   }
@@ -26,8 +26,8 @@ export class SequenceService {
   /**
    * Generates formatted reference ID using atomic sequence (e.g. EXP-2026-000012)
    */
-  public generateNextReference(prefixKey: ReferencePrefix): string {
-    const sequenceNum = this.getNextSequence(prefixKey);
+  public async generateNextReference(prefixKey: ReferencePrefix): Promise<string> {
+    const sequenceNum = await this.getNextSequence(prefixKey);
     return IdGenerator.generateReference(prefixKey, sequenceNum);
   }
 }

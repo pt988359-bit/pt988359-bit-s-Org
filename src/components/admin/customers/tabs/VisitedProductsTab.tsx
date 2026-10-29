@@ -49,7 +49,6 @@ export const VisitedProductsTab: React.FC<VisitedProductsTabProps> = ({ customer
                     <Clock className="w-3 h-3 text-blue-400" />
                     {new Date(p.visitedAt).toLocaleDateString('ar-EG')}
                   </span>
-                  <span>• {p.viewCount} مرات معاينة</span>
                 </div>
               </div>
             </div>

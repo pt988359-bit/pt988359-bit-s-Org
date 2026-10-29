@@ -1,8 +1,9 @@
 import React from 'react';
-import { X, ShieldCheck, MapPin, ShoppingBag, ArrowLeft } from 'lucide-react';
+import { X, ShieldCheck, MapPin, ArrowLeft } from 'lucide-react';
 import { Product } from '../../types';
 import { useShowroom } from '../../context/ShowroomContext';
 import { Button } from '../ui/Button';
+import { DEFAULT_PRODUCT_PLACEHOLDER } from '../../constants/placeholders';
 
 interface QuickViewModalProps {
   product: Product | null;
@@ -10,7 +11,7 @@ interface QuickViewModalProps {
 }
 
 export const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, onClose }) => {
-  const { navigateTo, addToCart } = useShowroom();
+  const { navigateTo } = useShowroom();
 
   if (!product) return null;
 
@@ -32,17 +33,26 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, onClose
         {/* Product Image */}
         <div className="w-full md:w-1/2 bg-slate-50 dark:bg-slate-950 p-6 flex items-center justify-center relative min-h-[260px]">
           <img
-            src={product.images?.[0] || 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=800&q=80'}
+            src={product.images?.[0] || DEFAULT_PRODUCT_PLACEHOLDER}
             alt={product.title}
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = DEFAULT_PRODUCT_PLACEHOLDER;
+            }}
             className="max-h-72 object-contain rounded-2xl drop-shadow-md"
           />
           <div className="absolute top-4 right-4 flex flex-col gap-2">
             <span className={`px-3 py-1 rounded-full text-xs font-bold ${
               product.condition === 'new'
                 ? 'bg-emerald-500 text-white'
+                : product.condition === 'used_warranty' || product.condition === 'refurbished'
+                ? 'bg-blue-600 text-white'
                 : 'bg-amber-500 text-white'
             }`}>
-              {product.condition === 'new' ? 'جديد بالضمان' : `مستعمل بحالة ${product.conditionRating ? `${product.conditionRating}/10` : 'كالجديد'}`}
+              {product.condition === 'new'
+                ? 'جديد بالضمان'
+                : product.condition === 'used_warranty' || product.condition === 'refurbished'
+                ? `مستعمل بضمان الشركة (${product.conditionRating ? `${product.conditionRating}/10` : 'كالجديد'})`
+                : `مستعمل بدون ضمان (${product.conditionRating ? `${product.conditionRating}/10` : 'كالجديد'})`}
             </span>
             {product.isNegotiable && (
               <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-600 text-white">
@@ -110,26 +120,14 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, onClose
             <Button
               variant="electric"
               size="md"
-              className="flex-1"
-              leftIcon={<ShoppingBag className="w-4 h-4" />}
-              onClick={() => {
-                addToCart(product);
-                onClose();
-                navigateTo('reservation');
-              }}
-            >
-              احجز
-            </Button>
-            <Button
-              variant="outline"
-              size="md"
+              className="w-full"
               rightIcon={<ArrowLeft className="w-4 h-4" />}
               onClick={() => {
                 onClose();
                 navigateTo('product-detail', { productId: product.id });
               }}
             >
-              التفاصيل الكاملة
+              عرض التفاصيل الكاملة
             </Button>
           </div>
         </div>

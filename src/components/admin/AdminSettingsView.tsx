@@ -27,7 +27,6 @@ export const AdminSettingsView: React.FC = () => {
   const [yt, setYt] = useState(settings.socialLinks?.youtube || '');
 
   const [warrantyPol, setWarrantyPol] = useState(settings.businessPolicies?.warrantyPolicy || '');
-  const [reservationPol, setReservationPol] = useState(settings.businessPolicies?.reservationPolicy || '');
   const [returnPol, setReturnPol] = useState(settings.businessPolicies?.returnPolicy || '');
 
   const handleSave = (e: React.FormEvent) => {
@@ -56,7 +55,6 @@ export const AdminSettingsView: React.FC = () => {
       },
       businessPolicies: {
         warrantyPolicy: warrantyPol,
-        reservationPolicy: reservationPol,
         returnPolicy: returnPol,
         inspectionPolicy: settings.businessPolicies?.inspectionPolicy || '',
       },
@@ -127,7 +125,6 @@ export const AdminSettingsView: React.FC = () => {
           </CardHeader>
           <CardBody className="p-6 flex flex-col gap-4">
             <Textarea label="سياسة الضمان والصيانة" value={warrantyPol} onChange={(e) => setWarrantyPol(e.target.value)} rows={3} />
-            <Textarea label="سياسة حجز العربون" value={reservationPol} onChange={(e) => setReservationPol(e.target.value)} rows={3} />
             <Textarea label="سياسة الاسترجاع والاستبدال" value={returnPol} onChange={(e) => setReturnPol(e.target.value)} rows={3} />
           </CardBody>
         </Card>

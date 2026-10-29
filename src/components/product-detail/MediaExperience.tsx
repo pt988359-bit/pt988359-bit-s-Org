@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Product } from '../../types';
 import { Video, Image as ImageIcon } from 'lucide-react';
+import { DEFAULT_PRODUCT_PLACEHOLDER } from '../../constants/placeholders';
 
 interface MediaExperienceProps {
   product: Product;
@@ -10,7 +11,7 @@ export const MediaExperience: React.FC<MediaExperienceProps> = ({ product }) => 
   const [activeTab, setActiveTab] = useState<'images' | 'video'>('images');
 
   const images = product.images && product.images.length > 0 ? product.images : [
-    'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80',
+    DEFAULT_PRODUCT_PLACEHOLDER,
   ];
 
   const videos = product.videos && product.videos.length > 0
@@ -74,6 +75,9 @@ export const MediaExperience: React.FC<MediaExperienceProps> = ({ product }) => 
               <img
                 src={img}
                 alt={`${product.title} ${idx + 1}`}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = DEFAULT_PRODUCT_PLACEHOLDER;
+                }}
                 loading="lazy"
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               />

@@ -2,6 +2,7 @@ import React from 'react';
 import { EnrichedProduct } from '../../../../../types/productStudio';
 import { ShoppingBag, MessageSquare } from 'lucide-react';
 import { useShowroom } from '../../../../../context/ShowroomContext';
+import { normalizeEgyptianPhone } from '../../../../../utils/phoneUtils';
 
 interface PurchaseRequestsTabProps {
   product: EnrichedProduct;
@@ -9,7 +10,7 @@ interface PurchaseRequestsTabProps {
 
 export const PurchaseRequestsTab: React.FC<PurchaseRequestsTabProps> = ({ product: _product }) => {
   const { settings } = useShowroom();
-  const whatsappUrl = `https://wa.me/${(settings.whatsappPhone || settings.phone).replace(/[^0-9]/g, '')}`;
+  const whatsappUrl = `https://wa.me/${normalizeEgyptianPhone(settings.whatsappPhone || settings.phone)}`;
 
   return (
     <div className="space-y-6 dir-rtl text-xs">

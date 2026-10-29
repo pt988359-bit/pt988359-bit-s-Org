@@ -13,6 +13,7 @@ import {
   ShowroomSettings,
 } from '../types';
 import { BUSINESS_CONFIG } from '../config/businessConfig';
+import { DEFAULT_PRODUCT_PLACEHOLDER } from '../constants/placeholders';
 
 /**
  * FINANCIALS ENGINE
@@ -91,7 +92,7 @@ export function buildProductMedia(images: string[], videos: string[] = [], image
     images: mediaImages,
     videos: mediaVideos,
     images360,
-    thumbnailUrl: images[0] || 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=800&q=80',
+    thumbnailUrl: images[0] || DEFAULT_PRODUCT_PLACEHOLDER,
   };
 }
 
@@ -265,7 +266,7 @@ export function generateProductSEO(product: Product, _showroomSettings?: Showroo
     description: seoDesc,
     keywords,
     canonicalUrl: `https://proteck-maadi.com/product/${product.id}`,
-    openGraphImage: product.images?.[0] || 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=800&q=80',
+    openGraphImage: product.images?.[0] || DEFAULT_PRODUCT_PLACEHOLDER,
   };
 }
 
@@ -304,7 +305,6 @@ export function generateProductJsonLd(product: Product, showroomSettings?: Showr
  */
 export function initializeProductAnalytics(existing?: Partial<ProductAnalytics>): ProductAnalytics {
   return {
-    views: existing?.views ?? 0,
     uniqueVisitors: existing?.uniqueVisitors ?? 0,
     whatsappClicks: existing?.whatsappClicks ?? 0,
     reservationCount: existing?.reservationCount ?? 0,

@@ -5,7 +5,7 @@
 
 import { BaseRepository } from './BaseRepository';
 import { StorageAdapter } from '../storage/StorageAdapter';
-import { defaultStorageAdapter } from '../storage/LocalStorageAdapter';
+import { firestoreStorageAdapter } from '../storage/FirestoreStorageAdapter';
 
 export interface Brand {
   id: string;
@@ -38,7 +38,7 @@ const INITIAL_BRANDS: Brand[] = [
 ];
 
 export class BrandRepository extends BaseRepository<Brand> {
-  constructor(storage: StorageAdapter = defaultStorageAdapter) {
+  constructor(storage: StorageAdapter = firestoreStorageAdapter) {
     super('brands', storage);
 
     // Seed initial brands if repository is empty
@@ -50,10 +50,6 @@ export class BrandRepository extends BaseRepository<Brand> {
 
   public getActiveBrands(): Brand[] {
     return this.query((b) => b.isActive !== false);
-  }
-
-  public delete(id: string): void {
-    this.remove(id);
   }
 }
 

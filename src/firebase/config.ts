@@ -30,6 +30,19 @@ const getEnv = (key: string): string | undefined => {
   return undefined;
 };
 
+const getEffectiveDatabaseId = (): string | undefined => {
+  const envDbId = getEnv('VITE_FIREBASE_DATABASE_ID');
+  // If envDbId is set to a non-default custom database, use it
+  if (envDbId && envDbId !== 'default' && envDbId !== '(default)' && envDbId.trim() !== '') {
+    return envDbId.trim();
+  }
+  // Otherwise, use the provisioned database ID from firebase-applet-config.json
+  if (firebaseConfigJson.firestoreDatabaseId && firebaseConfigJson.firestoreDatabaseId.trim() !== '') {
+    return firebaseConfigJson.firestoreDatabaseId.trim();
+  }
+  return undefined;
+};
+
 export const firebaseConfig: FirebaseAppConfig = {
   apiKey: getEnv('VITE_FIREBASE_API_KEY') || firebaseConfigJson.apiKey,
   authDomain: getEnv('VITE_FIREBASE_AUTH_DOMAIN') || firebaseConfigJson.authDomain,
@@ -37,5 +50,5 @@ export const firebaseConfig: FirebaseAppConfig = {
   storageBucket: getEnv('VITE_FIREBASE_STORAGE_BUCKET') || firebaseConfigJson.storageBucket || 'quadratic-infusion-gzp2g.firebasestorage.app',
   messagingSenderId: getEnv('VITE_FIREBASE_MESSAGING_SENDER_ID') || firebaseConfigJson.messagingSenderId,
   appId: getEnv('VITE_FIREBASE_APP_ID') || firebaseConfigJson.appId,
-  firestoreDatabaseId: getEnv('VITE_FIREBASE_DATABASE_ID') || firebaseConfigJson.firestoreDatabaseId,
+  firestoreDatabaseId: getEffectiveDatabaseId(),
 };

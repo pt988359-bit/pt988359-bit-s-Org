@@ -3,34 +3,34 @@ import {
   OrderWorkspaceModule,
   OrderDisplayMode,
   PurchaseRequest,
-  ReservationItem,
   NegotiationItem,
   InquiryItem,
   CompletedSaleItem,
   OrderAuditLogEntry,
 } from '../../../types/orderManagementCenter';
 import {
-  getPurchaseRequests,
-  savePurchaseRequests,
-  getReservations,
-  saveReservations,
-  getNegotiations,
-  saveNegotiations,
-  getInquiries,
-  saveInquiries,
-  getCompletedSales,
-  saveCompletedSales,
   getAuditLogs,
   logOrderAudit,
   exportOrderModuleToCSV,
 } from '../../../utils/orderManagementStorage';
-
+import {
+  defaultRequestRepository,
+  UnifiedCustomerRequest,
+  RequestStatus,
+} from '../../../core/repositories/RequestRepository';
+import {
+  mapUnifiedToLegacy,
+  mapUnifiedToNegotiation,
+  mapUnifiedToInquiry,
+  mapUnifiedToCompletedSale,
+  mapLegacyStatusToUnified,
+} from '../../../core/adapters/unifiedRequestAdapter';
+import { useShowroom } from '../../../context/ShowroomContext';
 
 import { OrderModuleTabs } from './OrderModuleTabs';
 import { defaultSequenceService } from '../../../core/services/SequenceService';
 import { IdGenerator } from '../../../core/services/IdGenerator';
 import { PurchaseRequestsWorkspace } from './PurchaseRequestsWorkspace';
-import { ReservationsWorkspace } from './ReservationsWorkspace';
 import { NegotiationsWorkspace } from './NegotiationsWorkspace';
 
 import { InquiriesWorkspace } from './InquiriesWorkspace';
@@ -48,15 +48,17 @@ import { BulkOperationsBar } from './BulkOperationsBar';
 import { UnifiedRequestsWorkspace } from './UnifiedRequestsWorkspace';
 
 export const OrderManagementHub: React.FC = () => {
+  const { products } = useShowroom();
+
   // Main Navigation & Display States
   const [activeModule, setActiveModule] = useState<OrderWorkspaceModule>('unified_requests');
   const [displayMode, setDisplayMode] = useState<OrderDisplayMode>('table');
   const [searchQuery, setSearchQuery] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('all');
 
-  // Data States
+  // Raw Unified Requests & Derived Data States
+  const [rawRequests, setRawRequests] = useState<UnifiedCustomerRequest[]>([]);
   const [purchaseRequests, setPurchaseRequests] = useState<PurchaseRequest[]>([]);
-  const [reservations, setReservations] = useState<ReservationItem[]>([]);
   const [negotiations, setNegotiations] = useState<NegotiationItem[]>([]);
   const [inquiries, setInquiries] = useState<InquiryItem[]>([]);
   const [completedSales, setCompletedSales] = useState<CompletedSaleItem[]>([]);
@@ -68,37 +70,50 @@ export const OrderManagementHub: React.FC = () => {
   const [activeAiModal, setActiveAiModal] = useState<any | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  // Load Initial Data
+  // Derive legacy workspace data from unified requests
+  const updateStatesFromRequests = (items: UnifiedCustomerRequest[], prods = products) => {
+    setRawRequests(items);
+    setPurchaseRequests(items.filter((item) => item.type === 'purchase').map((item) => mapUnifiedToLegacy(item, prods)));
+    setNegotiations(items.filter((item) => item.type === 'negotiation').map((item) => mapUnifiedToNegotiation(item, prods)));
+    setInquiries(items.filter((item) => item.type === 'inquiry').map((item) => mapUnifiedToInquiry(item, prods)));
+    setCompletedSales(items.filter((item) => item.status === 'completed').map((item) => mapUnifiedToCompletedSale(item, prods)));
+  };
+
+  // Re-derive when products list updates
   useEffect(() => {
-    setPurchaseRequests(getPurchaseRequests());
-    setReservations(getReservations());
-    setNegotiations(getNegotiations());
-    setInquiries(getInquiries());
-    setCompletedSales(getCompletedSales());
+    if (rawRequests.length > 0) {
+      updateStatesFromRequests(rawRequests, products);
+    }
+  }, [products]);
+
+  // Load Initial Data & Subscribe in Real Time
+  useEffect(() => {
+    // 1. Initial cached load
+    const cachedItems = defaultRequestRepository.getAll();
+    updateStatesFromRequests(cachedItems);
     setAuditLogs(getAuditLogs());
+
+    // 2. Real-time subscription to customer_requests collection
+    const unsubscribe = defaultRequestRepository.subscribe((liveItems) => {
+      if (Array.isArray(liveItems)) {
+        updateStatesFromRequests(liveItems);
+      }
+    });
+
+    // 3. Proactive initial remote fetch from Firestore
+    defaultRequestRepository
+      .fetchLive()
+      .then((liveItems) => {
+        if (Array.isArray(liveItems) && liveItems.length > 0) {
+          updateStatesFromRequests(liveItems);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
-
-  // Sync to Storage on Changes
-  useEffect(() => {
-    if (purchaseRequests.length) savePurchaseRequests(purchaseRequests);
-  }, [purchaseRequests]);
-
-  useEffect(() => {
-    if (reservations.length) saveReservations(reservations);
-  }, [reservations]);
-
-
-  useEffect(() => {
-    if (negotiations.length) saveNegotiations(negotiations);
-  }, [negotiations]);
-
-  useEffect(() => {
-    if (inquiries.length) saveInquiries(inquiries);
-  }, [inquiries]);
-
-  useEffect(() => {
-    if (completedSales.length) saveCompletedSales(completedSales);
-  }, [completedSales]);
 
   // Bulk Selection Handlers
   const handleToggleSelect = (id: string) => {
@@ -113,130 +128,103 @@ export const OrderManagementHub: React.FC = () => {
     }
   };
 
-  // Status Updates with Audit Logging
+  // Status Updates with Unified Repository Persistence & Audit Logging
   const handleUpdateStatus = (id: string, newStatus: string) => {
-    setPurchaseRequests((prev) =>
-      prev.map((pr) => {
-        if (pr.id === id) {
-          logOrderAudit('PRO TECK Admin', pr.referenceNumber, pr.status, newStatus, 'تغيير يدوي للحالة التشغيلية');
-          return { ...pr, status: newStatus as any };
-        }
-        return pr;
-      })
-    );
-    setAuditLogs(getAuditLogs());
-  };
-
-  // Convert Purchase Request -> Reservation
-  const handleConvertToReservation = (request: PurchaseRequest) => {
-    const newResNumber = defaultSequenceService.generateNextReference('reservation');
-    const newReservation: ReservationItem = {
-      id: IdGenerator.generateUniqueId('res'),
-      reservationNumber: newResNumber,
-      productTitle: request.productTitle,
-      productPrice: request.productPrice,
-      productImage: request.productImage,
-      customerName: request.customerName,
-      customerPhone: request.customerPhone,
-      reservationType: 'online_hold',
-      durationHours: 24,
-      createdAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 3600000 * 24).toISOString(),
-      remainingBalance: request.productPrice,
-      status: 'pending',
-
-      assignedAdmin: request.assignedAdmin || 'PRO TECK Admin',
-      autoReleaseEnabled: true,
-      timeline: [
-        {
-          id: IdGenerator.generateUniqueId('rtl'),
-          timestamp: new Date().toISOString(),
-          eventType: 'reservation_started',
-          title: 'تحويل طلب الشراء إلى حجز عربون',
-          description: `تم تحويل الطلب ${request.referenceNumber} إلى حجز برقم ${newResNumber}`,
-          actor: 'PRO TECK Admin',
-        },
-      ],
-    };
-
-    setReservations((prev) => [newReservation, ...prev]);
-    handleUpdateStatus(request.id, 'converted_to_reservation');
-  };
-
-  // Convert Reservation -> Completed Sale
-  const handleConvertToSale = (item: any) => {
-    const newOrderNumber = defaultSequenceService.generateNextReference('order');
-    const newSale: CompletedSaleItem = {
-      id: IdGenerator.generateUniqueId('sale'),
-      orderNumber: newOrderNumber,
-      customerName: item.customerName,
-      customerPhone: item.customerPhone,
-      productTitle: item.productTitle,
-      productImage: item.productImage || '',
-      finalPrice: item.productPrice || item.finalPrice || 0,
-      paymentMethod: 'cash',
-      invoiceNumber: defaultSequenceService.generateNextReference('invoice'),
-
-      completionDate: new Date().toISOString(),
-      deliveryType: 'showroom_pickup',
-      assignedAdmin: item.assignedAdmin || 'PRO TECK Admin',
-    };
-
-    setCompletedSales((prev) => [newSale, ...prev]);
-    logOrderAudit(
-      'PRO TECK Admin',
-      item.referenceNumber || item.reservationNumber,
-      item.status,
-      'completed',
-      `تم إتمام عملية البيع وإصدار الفاتورة (${newSale.invoiceNumber})`
-    );
-    setAuditLogs(getAuditLogs());
+    const target = rawRequests.find((r) => r.id === id) || defaultRequestRepository.getById(id);
+    if (target) {
+      const unifiedStatus = mapLegacyStatusToUnified(newStatus);
+      const updated: UnifiedCustomerRequest = {
+        ...target,
+        status: unifiedStatus,
+        updatedAt: new Date().toISOString(),
+      };
+      defaultRequestRepository.save(updated);
+      logOrderAudit('PRO TECK Admin', target.referenceNumber, target.status, unifiedStatus, 'تغيير الحالة التشغيلية من لوحة الإدارة');
+      setAuditLogs(getAuditLogs());
+    }
   };
 
   // Negotiation Handlers
-
   const handleUpdateNegotiation = (
     item: NegotiationItem,
     decision: 'accepted' | 'counter_offered' | 'declined',
     adminNote: string,
     counterAmount?: number
   ) => {
-    setNegotiations((prev) =>
-      prev.map((n) => {
-        if (n.id === item.id) {
-          return {
-            ...n,
-            status: decision,
-            adminNotes: adminNote,
-            suggestedPrice: counterAmount || n.suggestedPrice,
-            updatedAt: new Date().toISOString(),
-          };
-        }
-        return n;
-      })
-    );
-    logOrderAudit('PRO TECK Admin', item.referenceNumber, item.status, decision, adminNote);
-    setAuditLogs(getAuditLogs());
+    const target = rawRequests.find((r) => r.id === item.id) || defaultRequestRepository.getById(item.id);
+    if (target) {
+      let unifiedStatus: RequestStatus = 'waiting_customer';
+      if (decision === 'accepted') unifiedStatus = 'approved';
+      else if (decision === 'declined') unifiedStatus = 'rejected';
+      else if (decision === 'counter_offered') unifiedStatus = 'waiting_customer';
+
+      const updated: UnifiedCustomerRequest = {
+        ...target,
+        status: unifiedStatus,
+        adminNotes: adminNote || target.adminNotes,
+        finalPrice: counterAmount ?? target.finalPrice,
+        details: {
+          ...(target.details || {}),
+          negotiationDecision: decision,
+          counterAmount: counterAmount ?? target.details?.counterAmount,
+          lastAdminNote: adminNote,
+        },
+        updatedAt: new Date().toISOString(),
+      };
+      defaultRequestRepository.save(updated);
+      logOrderAudit('PRO TECK Admin', target.referenceNumber, target.status, unifiedStatus, adminNote || `تحديث التفاوض: ${decision}`);
+      setAuditLogs(getAuditLogs());
+    }
   };
 
   // Inquiry Answer Handler
   const handleAnswerInquiry = (id: string, response: string) => {
-    setInquiries((prev) =>
-      prev.map((inq) => (inq.id === id ? { ...inq, adminResponse: response, status: 'answered' } : inq))
-    );
-  };
-
-  // Auto Release Toggle
-  const handleToggleAutoRelease = (id: string) => {
-    setReservations((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, autoReleaseEnabled: !r.autoReleaseEnabled } : r))
-    );
+    const target = rawRequests.find((r) => r.id === id) || defaultRequestRepository.getById(id);
+    if (target) {
+      const updated: UnifiedCustomerRequest = {
+        ...target,
+        status: 'contacted',
+        adminNotes: response,
+        details: {
+          ...(target.details || {}),
+          adminResponse: response,
+          answeredAt: new Date().toISOString(),
+        },
+        updatedAt: new Date().toISOString(),
+      };
+      defaultRequestRepository.save(updated);
+      logOrderAudit('PRO TECK Admin', target.referenceNumber, target.status, 'contacted', `الرد على الاستفسار: ${response}`);
+      setAuditLogs(getAuditLogs());
+    }
   };
 
   // Create New Request
   const handleCreateRequest = (newReq: Partial<PurchaseRequest>) => {
-    setPurchaseRequests((prev) => [newReq as PurchaseRequest, ...prev]);
-    logOrderAudit('PRO TECK Admin', newReq.referenceNumber!, 'new', 'new', 'إنشاء طلب شراء جديد يدوياً');
+    const created = defaultRequestRepository.createRequest({
+      referenceNumber: newReq.referenceNumber || `PUR-${Date.now().toString().slice(-6)}`,
+      type: 'purchase',
+      customer: {
+        fullName: newReq.customerName || 'عميل جديد',
+        phone: newReq.customerPhone || '',
+        whatsappPhone: newReq.customerWhatsapp || newReq.customerPhone || '',
+      },
+      productId: newReq.productCode,
+      productTitle: newReq.productTitle,
+      productPrice: newReq.productPrice,
+      productImage: '',
+      status: 'new',
+      priority: newReq.priority === 'high' ? 'high' : 'medium',
+      adminNotes: newReq.notes,
+      auditTrail: [
+        {
+          timestamp: new Date().toISOString(),
+          status: 'pending_approval',
+          note: 'إنشاء طلب شراء جديد يدوياً بواسطة الأدمن',
+          actor: 'PRO TECK Admin',
+        },
+      ],
+    });
+    logOrderAudit('PRO TECK Admin', created.referenceNumber, 'new', 'new', 'إنشاء طلب شراء جديد يدوياً');
     setAuditLogs(getAuditLogs());
   };
 
@@ -244,7 +232,6 @@ export const OrderManagementHub: React.FC = () => {
   const handleExport = () => {
     let dataToExport: any[] = [];
     if (activeModule === 'purchase_requests') dataToExport = purchaseRequests;
-    else if (activeModule === 'reservations') dataToExport = reservations;
     else if (activeModule === 'negotiations') dataToExport = negotiations;
 
     else if (activeModule === 'inquiries') dataToExport = inquiries;
@@ -276,7 +263,6 @@ export const OrderManagementHub: React.FC = () => {
   const filteredRequests = filterBySearchAndPriority(
     purchaseRequests.filter((p) => p.status !== 'archived' && p.status !== 'rejected')
   );
-  const filteredReservations = filterBySearchAndPriority(reservations);
   const filteredNegotiations = filterBySearchAndPriority(negotiations);
   const filteredInquiries = filterBySearchAndPriority(inquiries);
   const filteredCompletedSales = filterBySearchAndPriority(completedSales);
@@ -297,7 +283,6 @@ export const OrderManagementHub: React.FC = () => {
         onPriorityFilterChange={setPriorityFilter}
         counts={{
           purchase_requests: filteredRequests.length,
-          reservations: filteredReservations.length,
           negotiations: filteredNegotiations.length,
           inquiries: filteredInquiries.length,
           completed_sales: filteredCompletedSales.length,
@@ -314,13 +299,11 @@ export const OrderManagementHub: React.FC = () => {
       {displayMode === 'kanban' ? (
         <OrderKanbanView
           purchaseRequests={filteredRequests}
-          reservations={filteredReservations}
           onSelectOrder={(item, type) => setActiveOrderModal({ item, type })}
           onMoveStatus={handleUpdateStatus}
         />
       ) : displayMode === 'calendar' ? (
         <OrderCalendarView
-          reservations={filteredReservations}
           purchaseRequests={filteredRequests}
           onSelectOrder={(item, type) => setActiveOrderModal({ item, type })}
         />
@@ -338,31 +321,6 @@ export const OrderManagementHub: React.FC = () => {
               onSelectAll={() => handleSelectAll(filteredRequests)}
               onSelectOrder={(item) => setActiveOrderModal({ item, type: 'request' })}
               onUpdateStatus={handleUpdateStatus}
-              onConvertToReservation={handleConvertToReservation}
-            />
-          )}
-
-          {activeModule === 'reservations' && (
-            <ReservationsWorkspace
-              reservations={filteredReservations}
-              selectedIds={selectedIds}
-              onToggleSelect={handleToggleSelect}
-              onSelectAll={() => handleSelectAll(filteredReservations)}
-              onSelectReservation={(item) => setActiveOrderModal({ item, type: 'reservation' })}
-              onUpdateStatus={handleUpdateStatus}
-              onToggleAutoRelease={handleToggleAutoRelease}
-              onConvertToSale={handleConvertToSale}
-            />
-          )}
-
-          {activeModule === 'negotiations' && (
-
-            <NegotiationsWorkspace
-              negotiations={filteredNegotiations}
-              selectedIds={selectedIds}
-              onToggleSelect={handleToggleSelect}
-              onSelectAll={() => handleSelectAll(filteredNegotiations)}
-              onUpdateNegotiation={handleUpdateNegotiation}
             />
           )}
 
@@ -389,7 +347,7 @@ export const OrderManagementHub: React.FC = () => {
             <CancelledArchivedWorkspace
               items={filteredCancelled}
               onRestore={(id) => handleUpdateStatus(id, 'new')}
-              onPurge={(id) => setPurchaseRequests((prev) => prev.filter((p) => p.id !== id))}
+              onPurge={(id) => defaultRequestRepository.delete(id)}
             />
           )}
 
@@ -398,7 +356,7 @@ export const OrderManagementHub: React.FC = () => {
               items={filteredArchived}
               isArchivedView
               onRestore={(id) => handleUpdateStatus(id, 'new')}
-              onPurge={(id) => setPurchaseRequests((prev) => prev.filter((p) => p.id !== id))}
+              onPurge={(id) => defaultRequestRepository.delete(id)}
             />
           )}
 
@@ -422,7 +380,7 @@ export const OrderManagementHub: React.FC = () => {
         onBulkExport={handleExport}
         onBulkPrint={() => window.print()}
         onBulkDelete={() => {
-          setPurchaseRequests((prev) => prev.filter((p) => !selectedIds.includes(p.id)));
+          selectedIds.forEach((id) => defaultRequestRepository.delete(id));
           setSelectedIds([]);
         }}
       />
@@ -434,8 +392,6 @@ export const OrderManagementHub: React.FC = () => {
           itemType={activeOrderModal.type as any}
           onClose={() => setActiveOrderModal(null)}
           onUpdateStatus={handleUpdateStatus}
-          onConvertToReservation={handleConvertToReservation}
-          onConvertToSale={handleConvertToSale}
           onOpenAiAssistant={(item) => {
             setActiveAiModal(item);
           }}

@@ -8,7 +8,6 @@ import { Skeleton } from '../ui/Skeleton';
 const AdminDashboardView = lazy(() => import('./AdminDashboardView').then(m => ({ default: m.AdminDashboardView })));
 const AdminProductsView = lazy(() => import('./AdminProductsView').then(m => ({ default: m.AdminProductsView })));
 const AdminCategoriesView = lazy(() => import('./AdminCategoriesView').then(m => ({ default: m.AdminCategoriesView })));
-const AdminReservationsView = lazy(() => import('./AdminReservationsView').then(m => ({ default: m.AdminReservationsView })));
 const AdminOrdersView = lazy(() => import('./AdminOrdersView').then(m => ({ default: m.AdminOrdersView })));
 const AdminPaymentsView = lazy(() => import('./AdminPaymentsView').then(m => ({ default: m.AdminPaymentsView })));
 const AdminInvoicesView = lazy(() => import('./AdminInvoicesView').then(m => ({ default: m.AdminInvoicesView })));
@@ -22,7 +21,6 @@ const AdminOperationsCenterView = lazy(() => import('./AdminOperationsCenterView
 
 // Core Foundation Components (Phase 9)
 import { AdminCommandPalette } from './core/AdminCommandPalette';
-import { AdminNotificationCenter } from './core/AdminNotificationCenter';
 import { AdminApprovalCenter } from './core/AdminApprovalCenter';
 import { AdminActivityTimelineModal } from './core/AdminActivityTimelineModal';
 import { AdminQuickActionCenter } from './core/AdminQuickActionCenter';
@@ -32,7 +30,6 @@ import { AdminSystemStatusModal } from './core/AdminSystemStatusModal';
 
 // Seed Storage Data
 import {
-  INITIAL_NOTIFICATIONS,
   INITIAL_APPROVALS,
   INITIAL_ACTIVITY_LOGS,
   INITIAL_RECENT_WORK,
@@ -42,7 +39,6 @@ import {
   INITIAL_FAILED_LOGINS,
 } from '../../utils/adminCoreStorage';
 import {
-  AdminNotification,
   ApprovalItem,
   ApprovalStatus,
   ActivityLogEntry,
@@ -61,7 +57,6 @@ export const AdminLayout: React.FC = () => {
 
   // Core Foundation Modal States
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
-  const [notificationCenterOpen, setNotificationCenterOpen] = useState(false);
   const [approvalCenterOpen, setApprovalCenterOpen] = useState(false);
   const [activityTimelineOpen, setActivityTimelineOpen] = useState(false);
   const [recentWorkOpen, setRecentWorkOpen] = useState(false);
@@ -69,7 +64,6 @@ export const AdminLayout: React.FC = () => {
   const [systemStatusOpen, setSystemStatusOpen] = useState(false);
 
   // Data States
-  const [notifications, setNotifications] = useState<AdminNotification[]>(INITIAL_NOTIFICATIONS);
   const [approvals, setApprovals] = useState<ApprovalItem[]>(INITIAL_APPROVALS);
   const [activityLogs, setActivityLogs] = useState<ActivityLogEntry[]>(INITIAL_ACTIVITY_LOGS);
   const [recentWorkItems] = useState<RecentWorkItem[]>(INITIAL_RECENT_WORK);
@@ -128,16 +122,12 @@ export const AdminLayout: React.FC = () => {
   const handleSelectQuickAction = (actionId: string) => {
     if (actionId === 'search-product') {
       setCommandPaletteOpen(true);
-    } else if (actionId === 'manual-notification') {
-      setNotificationCenterOpen(true);
     } else if (actionId === 'add-product') {
       navigateTo('admin-products');
     } else if (actionId === 'add-category') {
       navigateTo('admin-categories');
     } else if (actionId === 'create-invoice') {
       navigateTo('admin-invoices');
-    } else if (actionId === 'open-reservation') {
-      navigateTo('admin-reservations');
     } else if (actionId === 'open-ai') {
       navigateTo('admin-ai');
     } else if (actionId === 'add-customer') {
@@ -180,8 +170,6 @@ export const AdminLayout: React.FC = () => {
         return <AdminProductsView />;
       case 'admin-categories':
         return <AdminCategoriesView />;
-      case 'admin-reservations':
-        return <AdminReservationsView />;
       case 'admin-orders':
         return <AdminOrdersView />;
       case 'admin-payments':
@@ -210,7 +198,6 @@ export const AdminLayout: React.FC = () => {
     }
   };
 
-  const unreadNotificationCount = notifications.filter((n) => n.state === 'unread').length;
   const pendingApprovalCount = approvals.filter((a) => a.status === 'pending').length;
 
   return (
@@ -226,13 +213,11 @@ export const AdminLayout: React.FC = () => {
         <AdminHeader
           onOpenSidebar={() => setSidebarOpen(true)}
           onOpenCommandPalette={() => setCommandPaletteOpen(true)}
-          onOpenNotificationCenter={() => setNotificationCenterOpen(true)}
           onOpenApprovalCenter={() => setApprovalCenterOpen(true)}
           onOpenActivityTimeline={() => setActivityTimelineOpen(true)}
           onOpenRecentWork={() => setRecentWorkOpen(true)}
           onOpenProfileSecurity={() => setProfileSecurityOpen(true)}
           onOpenSystemStatus={() => setSystemStatusOpen(true)}
-          unreadNotificationCount={unreadNotificationCount}
           pendingApprovalCount={pendingApprovalCount}
         />
 
@@ -268,13 +253,6 @@ export const AdminLayout: React.FC = () => {
         isOpen={commandPaletteOpen}
         onClose={() => setCommandPaletteOpen(false)}
         onTriggerQuickAction={handleSelectQuickAction}
-      />
-
-      <AdminNotificationCenter
-        isOpen={notificationCenterOpen}
-        onClose={() => setNotificationCenterOpen(false)}
-        notifications={notifications}
-        onUpdateNotifications={setNotifications}
       />
 
       <AdminApprovalCenter

@@ -12,5 +12,6 @@ export interface StorageAdapter {
   clear(): void;
   getCollection<T>(collectionName: string): T[];
   saveCollection<T>(collectionName: string, items: T[]): void;
+  saveItem?<T>(collectionName: string, item: T): void;
   queryCollection<T>(collectionName: string, predicate: (item: T) => boolean): T[];
 }

@@ -17,7 +17,7 @@ export const PortalTimelineView: React.FC<PortalTimelineViewProps> = ({
           <span>الجدول الزمني الموحد لجميع التعاملات</span>
         </h1>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-          تسلسل زمني دقيق يعرض كافة أحداث الحجوزات، التحويلات، المعاينات، وإصدار المستندات بقاعدة البيانات.
+          تسلسل زمني دقيق يعرض كافة أحداث طلبات الشراء، المعاينات، وإصدار المستندات بقاعدة البيانات.
         </p>
       </div>
 

@@ -7,7 +7,8 @@
 
 import { BaseRepository } from './BaseRepository';
 import { StorageAdapter } from '../storage/StorageAdapter';
-import { defaultStorageAdapter } from '../storage/LocalStorageAdapter';
+import { firestoreStorageAdapter } from '../storage/FirestoreStorageAdapter';
+import { FIRESTORE_COLLECTIONS } from '../config/FirestoreConfig';
 import {
   ExpenseItem,
   ProductCostSheet,
@@ -19,17 +20,17 @@ import {
   FinancialAlert,
 } from '../../types/adminFinance';
 
-const EXPENSES_KEY = 'proteck_admin_expenses_v1';
-const COST_SHEETS_KEY = 'proteck_admin_cost_sheets_v1';
-const CASH_LEDGER_KEY = 'proteck_admin_cash_ledger_v1';
-const PROCUREMENT_KEY = 'proteck_admin_procurement_v1';
-const SUPPLIERS_KEY = 'proteck_admin_suppliers_v1';
-const PURCHASE_HISTORY_KEY = 'proteck_admin_purchase_history_v1';
-const TIMELINE_KEY = 'proteck_admin_financial_timeline_v1';
-const ALERTS_KEY = 'proteck_admin_financial_alerts_v1';
+const EXPENSES_KEY = FIRESTORE_COLLECTIONS.EXPENSES;
+const COST_SHEETS_KEY = FIRESTORE_COLLECTIONS.COST_SHEETS;
+const CASH_LEDGER_KEY = FIRESTORE_COLLECTIONS.CASH_LEDGERS;
+const PROCUREMENT_KEY = FIRESTORE_COLLECTIONS.PROCUREMENT;
+const SUPPLIERS_KEY = FIRESTORE_COLLECTIONS.SUPPLIERS;
+const PURCHASE_HISTORY_KEY = FIRESTORE_COLLECTIONS.PURCHASE_HISTORY;
+const TIMELINE_KEY = FIRESTORE_COLLECTIONS.FINANCIAL_TIMELINE;
+const ALERTS_KEY = FIRESTORE_COLLECTIONS.FINANCIAL_ALERTS;
 
 export class FinanceRepository extends BaseRepository<ExpenseItem> {
-  constructor(storage: StorageAdapter = defaultStorageAdapter) {
+  constructor(storage: StorageAdapter = firestoreStorageAdapter) {
     super(EXPENSES_KEY, storage);
   }
 

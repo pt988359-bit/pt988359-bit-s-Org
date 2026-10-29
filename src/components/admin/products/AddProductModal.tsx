@@ -30,7 +30,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   const [condition, setCondition] = useState<ProductCondition>('used_warranty');
   const [warrantyImageUrl, setWarrantyImageUrl] = useState('');
   const [description, setDescription] = useState('');
-  const [imageUrl, setImageUrl] = useState('https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=1000&q=80');
+  const [imageUrl, setImageUrl] = useState('');
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -68,12 +68,12 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title) return;
 
     const newId = IdGenerator.generateUniqueId('prod');
-    const internalCode = defaultSequenceService.generateNextReference('product');
+    const internalCode = await defaultSequenceService.generateNextReference('product');
 
     const normState = normalizeLifecycleState('available');
 
@@ -91,14 +91,13 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
       description,
       publicDescription: description,
       condition,
-      images: [imageUrl],
+      images: imageUrl.trim() ? [imageUrl.trim()] : [],
       videos: [],
       ...normState,
       isNegotiable: true,
       warrantyAvailable: condition === 'used_warranty' || !!warrantyImageUrl,
       warrantyImageUrl: warrantyImageUrl.trim() || undefined,
       warrantyCardAvailable: condition === 'used_warranty' || !!warrantyImageUrl,
-      viewsCount: 0,
       reservationsCount: 0,
       purchaseRequestsCount: 0,
       negotiationsCount: 0,

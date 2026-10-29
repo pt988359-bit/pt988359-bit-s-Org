@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { ToastMessage, ToastType } from '../types';
 import { CheckCircle2, AlertCircle, Info, AlertTriangle, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { IdGenerator } from '../core/services/IdGenerator';
+import { ToastDispatcher } from '../core/services/ToastDispatcher';
 
 interface ToastContextType {
   toasts: ToastMessage[];
@@ -34,6 +35,13 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     },
     [removeToast]
   );
+
+  useEffect(() => {
+    const unsubscribe = ToastDispatcher.subscribe((title, message, type, duration) => {
+      showToast(title, message, type, duration);
+    });
+    return unsubscribe;
+  }, [showToast]);
 
   return (
     <ToastContext.Provider value={{ toasts, showToast, removeToast }}>

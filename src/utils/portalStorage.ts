@@ -19,6 +19,8 @@ import {
   getStoredSellRequests,
   getStoredExchangeRequests,
 } from './customerHubStorage';
+import { defaultRequestRepository } from '../core/repositories/RequestRepository';
+import { mapUnifiedToLegacy, mapUnifiedToNegotiation } from '../core/adapters/unifiedRequestAdapter';
 
 const STORAGE_KEYS = {
   PORTAL_SESSION: 'proteck_portal_session_v1',
@@ -198,17 +200,27 @@ export function verifyPortalLogin(
 export function getCustomerAggregatedData(phone: string, _trackingCodes: string[] = []) {
   const normPhone = normalizePhone(phone);
 
-  const purchaseRequests = getPurchaseRequests().filter(
-    (p) => normalizePhone(p.customerPhone) === normPhone
-  );
+  const allRequests = defaultRequestRepository.getAll();
+
+  const purchaseRequests = allRequests
+    .filter(
+      (req) =>
+        req.type === 'purchase' &&
+        normalizePhone(req.customer?.phone || '') === normPhone
+    )
+    .map((req) => mapUnifiedToLegacy(req));
 
   const reservations = getReservations().filter(
     (r) => normalizePhone(r.customerPhone) === normPhone
   );
 
-  const negotiations = getNegotiations().filter(
-    (n) => normalizePhone(n.customerPhone) === normPhone
-  );
+  const negotiations = allRequests
+    .filter(
+      (req) =>
+        req.type === 'negotiation' &&
+        normalizePhone(req.customer?.phone || '') === normPhone
+    )
+    .map((req) => mapUnifiedToNegotiation(req));
 
   const inquiries = getInquiries().filter(
     (i) => normalizePhone(i.customerPhone) === normPhone

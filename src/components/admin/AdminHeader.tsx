@@ -4,7 +4,6 @@ import { useAuth } from '../../context/AuthContext';
 import { BUSINESS_CONFIG } from '../../config/businessConfig';
 import {
   Menu,
-  Bell,
   Search,
   ShieldCheck,
   Bot,
@@ -24,26 +23,22 @@ import {
 interface AdminHeaderProps {
   onOpenSidebar: () => void;
   onOpenCommandPalette: () => void;
-  onOpenNotificationCenter: () => void;
   onOpenApprovalCenter: () => void;
   onOpenActivityTimeline: () => void;
   onOpenRecentWork: () => void;
   onOpenProfileSecurity: () => void;
   onOpenSystemStatus: () => void;
-  unreadNotificationCount: number;
   pendingApprovalCount: number;
 }
 
 export const AdminHeader: React.FC<AdminHeaderProps> = ({
   onOpenSidebar,
   onOpenCommandPalette,
-  onOpenNotificationCenter,
   onOpenApprovalCenter,
   onOpenActivityTimeline,
   onOpenRecentWork,
   onOpenProfileSecurity,
   onOpenSystemStatus,
-  unreadNotificationCount,
   pendingApprovalCount,
 }) => {
   const { currentRoute, navigateTo } = useShowroom();
@@ -57,8 +52,6 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
         return 'إدارة الأجهزة والمنتجات';
       case 'admin-categories':
         return 'الأقسام والفئات';
-      case 'admin-reservations':
-        return 'إدارة الحجوزات والطلبات';
       case 'admin-orders':
         return 'أوامر الشراء والتوريد';
       case 'admin-payments':
@@ -158,20 +151,6 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
           {pendingApprovalCount > 0 && (
             <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-slate-950 font-black text-[10px]">
               {pendingApprovalCount}
-            </span>
-          )}
-        </button>
-
-        {/* Notification Center Button */}
-        <button
-          onClick={onOpenNotificationCenter}
-          className="p-2 sm:p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors relative cursor-pointer border border-slate-700 min-w-[38px] min-h-[38px] flex items-center justify-center"
-          title="مركز الإشعارات والتنبيهات"
-        >
-          <Bell className="w-4 h-4" />
-          {unreadNotificationCount > 0 && (
-            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-blue-500 text-white font-extrabold text-[10px] flex items-center justify-center border border-slate-900">
-              {unreadNotificationCount}
             </span>
           )}
         </button>

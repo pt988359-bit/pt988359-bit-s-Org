@@ -5,13 +5,14 @@
 
 import { BaseRepository } from './BaseRepository';
 import { StorageAdapter } from '../storage/StorageAdapter';
-import { defaultStorageAdapter } from '../storage/LocalStorageAdapter';
+import { firestoreStorageAdapter } from '../storage/FirestoreStorageAdapter';
 import { AppliancePurchaseRecord } from '../../types/adminFinance';
+import { FIRESTORE_COLLECTIONS } from '../config/FirestoreConfig';
 
-const PURCHASE_HISTORY_KEY = 'proteck_admin_purchase_history_v1';
+const PURCHASE_HISTORY_KEY = FIRESTORE_COLLECTIONS.PURCHASE_HISTORY;
 
 export class PurchaseRepository extends BaseRepository<AppliancePurchaseRecord> {
-  constructor(storage: StorageAdapter = defaultStorageAdapter) {
+  constructor(storage: StorageAdapter = firestoreStorageAdapter) {
     super(PURCHASE_HISTORY_KEY, storage);
   }
 }

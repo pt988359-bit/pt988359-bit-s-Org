@@ -78,10 +78,10 @@ export const PortalLoginPage: React.FC<PortalLoginPageProps> = ({
 
           <div className="space-y-1">
             <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
-              بوابة متابعة الحجوزات والطلبات
+              بوابة متابعة المشتريات والطلبات
             </h1>
             <p className="text-xs text-slate-400">
-              الدخول الآمن لمتابعة طلباتك ورقم التتبع الخاص بالحجز
+              الدخول الآمن لمتابعة طلباتك ومشترياتك
             </p>
           </div>
         </div>

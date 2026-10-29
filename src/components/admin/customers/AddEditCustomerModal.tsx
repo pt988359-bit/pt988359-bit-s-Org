@@ -17,15 +17,15 @@ export const AddEditCustomerModal: React.FC<AddEditCustomerModalProps> = ({
   const [primaryPhone, setPrimaryPhone] = useState(customer?.primaryPhone || '');
   const [whatsappPhone, setWhatsappPhone] = useState(customer?.whatsappPhone || '');
   const [email, setEmail] = useState(customer?.email || '');
-  const [governorate, setGovernorate] = useState(customer?.address.governorate || 'القاهرة');
-  const [cityArea, setCityArea] = useState(customer?.address.cityArea || 'المعادي');
-  const [streetAddress, setStreetAddress] = useState(customer?.address.streetAddress || '');
+  const [governorate, setGovernorate] = useState(customer?.address?.governorate || '');
+  const [cityArea, setCityArea] = useState(customer?.address?.cityArea || '');
+  const [streetAddress, setStreetAddress] = useState(customer?.address?.streetAddress || '');
   const [preferredContactMethod, setPreferredContactMethod] = useState<PreferredContactMethod>(
     customer?.preferredContactMethod || 'whatsapp'
   );
   const [status, setStatus] = useState<CustomerStatus>(customer?.status || 'new');
   const [assignedAdmin, setAssignedAdmin] = useState(customer?.assignedAdmin || 'PRO TECK Admin');
-  const [tagsText, setTagsText] = useState(customer?.tags.join(', ') || 'VIP, High Value');
+  const [tagsText, setTagsText] = useState(customer?.tags?.join(', ') || 'VIP, High Value');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,6 +138,7 @@ export const AddEditCustomerModal: React.FC<AddEditCustomerModalProps> = ({
                 onChange={(e) => setGovernorate(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500"
               >
+                <option value="">-- غير محدد --</option>
                 <option value="القاهرة">القاهرة</option>
                 <option value="الجيزة">الجيزة</option>
                 <option value="القليوبية">القليوبية</option>

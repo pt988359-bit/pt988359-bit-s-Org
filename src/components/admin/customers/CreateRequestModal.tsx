@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Customer } from '../../../types/customerHub';
-import { ShoppingBag, BookmarkCheck, DollarSign, Percent, RefreshCw, Repeat, X, Save } from 'lucide-react';
+import { ShoppingBag, DollarSign, Percent, RefreshCw, Repeat, X, Save } from 'lucide-react';
 
 interface CreateRequestModalProps {
   customer: Customer;
@@ -14,13 +14,12 @@ export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({
   onCreate,
 }) => {
   const [requestType, setRequestType] = useState<
-    'purchase' | 'reservation' | 'negotiation' | 'sell' | 'exchange'
+    'purchase' | 'negotiation' | 'sell' | 'exchange'
   >('purchase');
 
   const [productTitle, setProductTitle] = useState('ثلاجة LG InstaView 24 قدم نوفروست استيل');
   const [price, setPrice] = useState(45500);
   const [amount, setAmount] = useState(2000);
-  const [durationHours, setDurationHours] = useState(24);
   const [deviceDescription, setDeviceDescription] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -35,19 +34,8 @@ export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({
           price,
           warrantyAvailable: true,
           condition: 'certified_refurbished',
-          image: 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=600&q=80',
+          image: '',
         },
-      });
-    } else if (requestType === 'reservation') {
-      onCreate('reservation', {
-        product: {
-          id: `prod-${Date.now()}`,
-          title: productTitle,
-          brand: 'LG',
-          price,
-          image: 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=600&q=80',
-        },
-        durationHours: 24,
       });
     } else if (requestType === 'negotiation') {
       onCreate('negotiation', {
@@ -55,7 +43,7 @@ export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({
           id: `prod-${Date.now()}`,
           title: productTitle,
           originalPrice: price,
-          image: 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=600&q=80',
+          image: '',
         },
         suggestedPrice: price - amount,
         notes: deviceDescription,
@@ -108,10 +96,9 @@ export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500 font-bold"
             >
               <option value="purchase">1. طلب شراء جهاز (Purchase Request)</option>
-              <option value="reservation">2. طلب حجز جهاز (Reservation Request - 24 Hours)</option>
-              <option value="negotiation">3. طلب تفاوض على السعر (Negotiation)</option>
-              <option value="sell">4. طلب بيع جهاز من العميل للشركة (Sell Device)</option>
-              <option value="exchange">5. طلب استبدال جهاز (Exchange Request)</option>
+              <option value="negotiation">2. طلب تفاوض على السعر (Negotiation)</option>
+              <option value="sell">3. طلب بيع جهاز من العميل للشركة (Sell Device)</option>
+              <option value="exchange">4. طلب استبدال جهاز (Exchange Request)</option>
             </select>
           </div>
 

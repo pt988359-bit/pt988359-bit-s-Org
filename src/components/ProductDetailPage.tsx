@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useShowroom } from '../context/ShowroomContext';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
-import { ReservationService } from '../core/services/ReservationService';
+import { normalizeEgyptianPhone } from '../utils/phoneUtils';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import { MediaExperience } from './product-detail/MediaExperience';
@@ -11,7 +11,6 @@ import { SimilarProducts } from './product-detail/SimilarProducts';
 import { ProductExchangeModal } from './ProductExchangeModal';
 import { ProductActionModals } from './product-detail/ProductActionModals';
 import {
-  Sparkles,
   MessageCircle,
   Tag,
   ShieldCheck,
@@ -27,12 +26,9 @@ export const ProductDetailPage: React.FC = () => {
 
   const [isExchangeModalOpen, setIsExchangeModalOpen] = useState<boolean>(false);
   const [actionModalType, setActionModalType] = useState<
-    'buy' | 'negotiate' | 'showroom' | 'directions' | 'reserve' | 'exchange' | 'inquiry' | null
+    'buy' | 'negotiate' | 'showroom' | 'directions' | 'exchange' | 'inquiry' | null
   >(null);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
-
-  const { customer } = useCustomerAuth();
-  const hasActiveReservation = customer?.phone ? ReservationService.hasActiveReservation(customer.phone) : false;
 
   const product = selectedProductId ? getProductById(selectedProductId) : undefined;
 
@@ -64,7 +60,7 @@ export const ProductDetailPage: React.FC = () => {
 
   const handleNegotiateWhatsApp = () => {
     const phone = settings.whatsappPhone || settings.phone;
-    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    const cleanPhone = normalizeEgyptianPhone(phone || '');
     const text = encodeURIComponent(
       `مرحباً PRO TECK، أود التفاوض على سعر الجهاز التالي:\n` +
       `اسم الجهاز: ${product.title}\n` +
@@ -132,55 +128,20 @@ export const ProductDetailPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="text-right sm:text-left bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-2xl">
-            <span className="text-[10px] text-emerald-400 block font-bold">حجز أونلاين مجاني:</span>
-            <span className="text-xs font-bold text-white">24 ساعة حجب فوري</span>
+          <div className="text-right sm:text-left bg-blue-500/10 border border-blue-500/20 p-3 rounded-2xl">
+            <span className="text-[10px] text-blue-400 block font-bold">شراء ومعاينة:</span>
+            <span className="text-xs font-bold text-white">معاينة وفحص بفرع المعادي</span>
           </div>
         </div>
 
         {/* Primary Action Buttons */}
-        {hasActiveReservation && (
-          <div className="p-3.5 rounded-2xl bg-amber-950/40 border border-amber-500/30 text-amber-300 text-xs font-bold flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
-            <span>لديك حجز نشط بالفعل على جهاز آخر. يُسمح للعميل بحجز جهاز واحد فقط في نفس الوقت.</span>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {product.status === 'available' ? (
-            hasActiveReservation ? (
-              <Button
-                variant="secondary"
-                size="lg"
-                className="w-full font-bold opacity-60 cursor-not-allowed"
-                disabled
-                leftIcon={<Sparkles className="w-5 h-5 text-slate-500" />}
-              >
-                حجز غير متاح (لديك حجز نشط)
-              </Button>
-            ) : (
-              <Button
-                variant="electric"
-                size="lg"
-                className="w-full font-extrabold"
-                onClick={() => setActionModalType('reserve')}
-                leftIcon={<Sparkles className="w-5 h-5 text-amber-300" />}
-              >
-                حجز الجهاز الآن مجاناً (24 ساعة)
-              </Button>
-            )
-          ) : (
-            <Button variant="secondary" size="lg" className="w-full" disabled>
-              الجهاز محجوز حالياً
-            </Button>
-          )}
-
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Button
-            variant="silver"
+            variant="electric"
             size="lg"
-            className="w-full font-bold"
+            className="w-full font-extrabold"
             onClick={() => setActionModalType('buy')}
-            leftIcon={<Tag className="w-5 h-5 text-blue-400" />}
+            leftIcon={<Tag className="w-5 h-5 text-white" />}
           >
             طلب شراء مباشر
           </Button>

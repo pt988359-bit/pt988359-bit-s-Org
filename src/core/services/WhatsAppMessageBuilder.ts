@@ -18,6 +18,8 @@ export interface SellDeviceDataPayload {
   condition: string;
   description: string;
   expectedPrice?: number;
+  requestNumber?: string;
+  model?: string;
 }
 
 export interface TradeInDeviceDataPayload {
@@ -38,37 +40,6 @@ export class WhatsAppMessageBuilder {
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
     return `${day}/${month}/${year} ${hours}:${minutes}`;
-  }
-
-  // 1. Reservation Message
-  public static buildReservationMessage(
-    customer: CustomerDataPayload,
-    product: ProductDataPayload,
-    refCode?: string
-  ): string {
-    const timeStr = this.formatDateTime();
-    return `طلب حجز جهاز
-
-الاسم:
-${customer.name}
-
-رقم الهاتف:
-${customer.phone}
-
-البريد:
-${customer.email || 'غير محدد'}
-
-الجهاز:
-${product.title}
-
-الكود:
-${refCode || product.code}
-
-السعر:
-${product.price.toLocaleString()} جنيه
-
-وقت الطلب:
-${timeStr}`;
   }
 
   // 2. Purchase Message
@@ -148,7 +119,7 @@ ${timeStr}`;
   ): string {
     const timeStr = this.formatDateTime();
     return `طلب بيع جهاز للمعرض
-
+${device.requestNumber ? `\nرقم الطلب:\n${device.requestNumber}\n` : ''}
 الاسم:
 ${customer.name}
 
@@ -160,7 +131,7 @@ ${customer.email || 'غير محدد'}
 
 بيانات الجهاز المعروض للبيع:
 • نوع الجهاز: ${device.deviceType}
-• الماركة: ${device.brand}
+• الماركة: ${device.brand}${device.model ? `\n• الموديل: ${device.model}` : ''}
 • الحالة: ${device.condition}
 • الوصف التفصيلي: ${device.description}
 ${device.expectedPrice ? `• السعر المطلوب: ${device.expectedPrice.toLocaleString()} جنيه` : ''}
@@ -228,6 +199,17 @@ ${refCode || product.code}
 ${questionText}
 
 وقت الطلب:
+${timeStr}`;
+  }
+
+  // 7. Maintenance & Repair Service Message
+  public static buildServiceRequestMessage(): string {
+    const timeStr = this.formatDateTime();
+    return `طلب استفسار عن خدمات الصيانة والإصلاح
+
+مرحبًا، أرغب في الاستفسار عن خدمات الصيانة/الإصلاح المنزلي للأجهزة الكهربائية لدى PRO TECK.
+
+وقت الإرسال:
 ${timeStr}`;
   }
 

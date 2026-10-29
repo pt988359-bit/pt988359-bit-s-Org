@@ -77,11 +77,24 @@ export const ProductGridView: React.FC<ProductGridViewProps> = ({
               onClick={() => onOpenWorkspace(p)}
               className="relative aspect-video w-full bg-slate-950 overflow-hidden cursor-pointer"
             >
-              <img
-                src={p.images?.[0] || 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=800&q=80'}
-                alt={p.title}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              />
+              {p.images?.[0] ? (
+                <img
+                  src={p.images[0]}
+                  alt={p.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                  }}
+                />
+              ) : null}
+              <div
+                className={`${
+                  p.images?.[0] ? 'hidden ' : ''
+                }w-full h-full flex flex-col items-center justify-center bg-slate-800 text-slate-400 text-xs font-bold select-none`}
+              >
+                لا توجد صورة
+              </div>
               <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white font-bold transition-opacity">
                 <span className="px-3 py-1.5 rounded-xl bg-blue-600/90 text-xs flex items-center gap-1.5 shadow-lg">
                   <Maximize2 className="w-4 h-4" /> فتح الاستوديو

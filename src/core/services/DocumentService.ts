@@ -18,9 +18,9 @@ export interface GeneratedDocument {
 }
 
 export class DocumentService {
-  public static generateInvoiceDocument(orderId: string, customerName: string, totalAmount: number): GeneratedDocument {
+  public static async generateInvoiceDocument(orderId: string, customerName: string, totalAmount: number): Promise<GeneratedDocument> {
     const documentId = IdGenerator.generateUniqueId('doc-inv');
-    const referenceNumber = defaultSequenceService.generateNextReference('invoice');
+    const referenceNumber = await defaultSequenceService.generateNextReference('invoice');
     const createdAt = DateTimeService.nowISO();
 
     const qrPayload = JSON.stringify({

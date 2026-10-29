@@ -17,18 +17,20 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ onClose, onC
   const [priority, setPriority] = useState<'high' | 'medium' | 'low'>('high');
   const [notes, setNotes] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerName || !customerPhone || !productTitle) return;
 
+    const referenceNumber = await defaultSequenceService.generateNextReference('purchase');
+
     onCreate({
-      referenceNumber: defaultSequenceService.generateNextReference('purchase'),
+      referenceNumber,
       customerName,
       customerPhone,
       customerWhatsapp: `20${customerPhone.replace(/^0/, '')}`,
       productTitle,
       productPrice,
-      productImage: 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=600&q=80',
+      productImage: '',
       productCode: `PROD-${IdGenerator.generateUniqueId('p').slice(-4).toUpperCase()}`,
       requestedDate: new Date().toISOString(),
       status: 'new',
@@ -56,7 +58,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ onClose, onC
         <div className="flex items-center justify-between pb-3 border-b border-slate-800">
           <h2 className="font-extrabold text-sm text-white flex items-center gap-2">
             <ShoppingCart className="w-5 h-5 text-emerald-400" />
-            <span>تسجيل طلب شراء / حجز جديد يدوياً</span>
+            <span>تسجيل طلب شراء جديد يدوياً</span>
           </h2>
           <button onClick={onClose} className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white">
             <X className="w-5 h-5" />

@@ -52,6 +52,7 @@ export const AiProductIntakeModal: React.FC<AiProductIntakeModalProps> = ({
   const [analyzeProgress, setAnalyzeProgress] = useState('');
   const [extractedData, setExtractedData] = useState<ExtractedProductData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isCreatingProduct, setIsCreatingProduct] = useState(false);
 
   // Cancellation controller
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -216,10 +217,15 @@ export const AiProductIntakeModal: React.FC<AiProductIntakeModalProps> = ({
   };
 
   // Create Product upon Admin Approval
-  const handleApproveAndCreate = () => {
-    if (!extractedData) return;
-    const { product } = AiExtractionService.buildProductFromExtractedData(extractedData, 'PRO TECK Admin');
-    onAddProduct(product);
+  const handleApproveAndCreate = async () => {
+    if (isCreatingProduct || !extractedData) return;
+    setIsCreatingProduct(true);
+    try {
+      const { product } = await AiExtractionService.buildProductFromExtractedData(extractedData, 'PRO TECK Admin');
+      onAddProduct(product);
+    } finally {
+      setIsCreatingProduct(false);
+    }
   };
 
   // Confidence Badge Renderer
@@ -445,10 +451,24 @@ export const AiProductIntakeModal: React.FC<AiProductIntakeModalProps> = ({
 
                   <button
                     onClick={handleApproveAndCreate}
-                    className="px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all hover:scale-105"
+                    disabled={isCreatingProduct}
+                    className={`px-6 py-2 rounded-xl bg-emerald-600 text-white font-extrabold text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all ${
+                      isCreatingProduct
+                        ? 'opacity-60 cursor-not-allowed'
+                        : 'hover:bg-emerald-500 hover:scale-105 cursor-pointer'
+                    }`}
                   >
-                    <Save className="w-4 h-4" />
-                    <span>اعتماد وإنشاء الجهاز بالنظام</span>
+                    {isCreatingProduct ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-white" />
+                        <span>جاري الإنشاء...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        <span>اعتماد وإنشاء الجهاز بالنظام</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -821,10 +841,24 @@ export const AiProductIntakeModal: React.FC<AiProductIntakeModalProps> = ({
 
                 <button
                   onClick={handleApproveAndCreate}
-                  className="px-8 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs cursor-pointer flex items-center gap-2 shadow-xl shadow-emerald-600/30 transition-all hover:scale-105"
+                  disabled={isCreatingProduct}
+                  className={`px-8 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black text-xs flex items-center gap-2 shadow-xl shadow-emerald-600/30 transition-all ${
+                    isCreatingProduct
+                      ? 'opacity-60 cursor-not-allowed'
+                      : 'hover:from-emerald-500 hover:to-teal-500 hover:scale-105 cursor-pointer'
+                  }`}
                 >
-                  <Save className="w-4 h-4" />
-                  <span>اعتماد وإضافة الجهاز لقاعدة البيانات المعرض</span>
+                  {isCreatingProduct ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-white" />
+                      <span>جاري الإنشاء...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      <span>اعتماد وإضافة الجهاز لقاعدة البيانات المعرض</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>

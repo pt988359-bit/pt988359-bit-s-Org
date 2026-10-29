@@ -23,13 +23,13 @@ export const WhyChooseUs: React.FC = () => {
     },
     {
       icon: <BookmarkCheck className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />,
-      title: "نظام حجز مسبق للجهاز",
-      description: "احجز الجهاز المفضّل أونلاين واحفظه باسمك لمنع بيعه لعميل آخر حتى حضورك للمعاينة بالمعرض."
+      title: "طلب شراء مباشر وسريع",
+      description: "اطلب جهازك المفضل أونلاين وتواصل مباشرة مع خبرائنا لتجهيزه للمعاينة بالمعرض أو الشحن."
     },
     {
       icon: <CreditCard className="w-7 h-7 text-amber-600 dark:text-amber-400" />,
-      title: "حجز مجاني وتأكيد فورى",
-      description: "تأكيد حجز الجهاز مجاناً أونلاين وحفظه باسمك لحين المعاينة والطلب النهائي بالمعرض."
+      title: "دفع آمن عند الاستلام",
+      description: "تسوق بكل اطمئنان وسدد قيمة جهازك بالكامل بعد المعاينة والتجربة دون أي مدفوعات مسبقة."
     },
     {
       icon: <RotateCcw className="w-7 h-7 text-rose-600 dark:text-rose-400" />,

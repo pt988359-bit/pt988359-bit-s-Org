@@ -1,14 +1,15 @@
 import React from 'react';
-import { Sparkles, Eye, ArrowLeft, ShoppingBag } from 'lucide-react';
+import { Sparkles, Eye, ArrowLeft } from 'lucide-react';
 import { Product } from '../../types';
 import { useShowroom } from '../../context/ShowroomContext';
+import { DEFAULT_PRODUCT_PLACEHOLDER } from '../../constants/placeholders';
 
 interface NewArrivalsProps {
   onQuickView: (product: Product) => void;
 }
 
 export const NewArrivals: React.FC<NewArrivalsProps> = ({ onQuickView }) => {
-  const { products, isLoadingProducts, navigateTo, addToCart } = useShowroom();
+  const { products, isLoadingProducts, navigateTo } = useShowroom();
 
   // Get products sorted by createdAt descending
   const newArrivals = [...products]
@@ -60,9 +61,15 @@ export const NewArrivals: React.FC<NewArrivalsProps> = ({ onQuickView }) => {
               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                 product.condition === 'new'
                   ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                  : product.condition === 'used_warranty' || product.condition === 'refurbished'
+                  ? 'bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800'
                   : 'bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
               }`}>
-                {product.condition === 'new' ? 'زيرو بالكرتونة' : `مستعمل ${product.conditionRating ? `${product.conditionRating}/10` : 'كالجديد'}`}
+                {product.condition === 'new'
+                  ? 'زيرو بالكرتونة'
+                  : product.condition === 'used_warranty' || product.condition === 'refurbished'
+                  ? `بضمان الشركة ${product.conditionRating ? `${product.conditionRating}/10` : 'كالجديد'}`
+                  : `بدون ضمان ${product.conditionRating ? `${product.conditionRating}/10` : 'كالجديد'}`}
               </span>
             </div>
 
@@ -72,8 +79,11 @@ export const NewArrivals: React.FC<NewArrivalsProps> = ({ onQuickView }) => {
               className="relative w-full h-48 bg-slate-50 dark:bg-slate-950 rounded-2xl overflow-hidden mb-4 flex items-center justify-center p-4 cursor-pointer"
             >
               <img
-                src={product.images?.[0] || 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=800&q=80'}
+                src={product.images?.[0] || DEFAULT_PRODUCT_PLACEHOLDER}
                 alt={product.title}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = DEFAULT_PRODUCT_PLACEHOLDER;
+                }}
                 className="max-h-40 object-contain group-hover:scale-105 transition-transform duration-300"
               />
             </div>
@@ -110,14 +120,10 @@ export const NewArrivals: React.FC<NewArrivalsProps> = ({ onQuickView }) => {
                   <span>معاينة</span>
                 </button>
                 <button
-                  onClick={() => {
-                    addToCart(product);
-                    navigateTo('reservation');
-                  }}
+                  onClick={() => navigateTo('product-detail', { productId: product.id })}
                   className="py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-sm cursor-pointer"
                 >
-                  <ShoppingBag className="w-3.5 h-3.5" />
-                  <span>حجز</span>
+                  <span>التفاصيل</span>
                 </button>
               </div>
             </div>

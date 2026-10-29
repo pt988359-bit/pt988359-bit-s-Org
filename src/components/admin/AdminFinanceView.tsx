@@ -87,8 +87,8 @@ export const AdminFinanceView: React.FC = () => {
   }, [expenses, ledger, costSheets]);
 
   // Event Handlers
-  const handleAddExpense = (expenseData: Omit<ExpenseItem, 'id' | 'referenceNumber' | 'isArchived'>) => {
-    saveExpense(expenseData);
+  const handleAddExpense = async (expenseData: Omit<ExpenseItem, 'id' | 'referenceNumber' | 'isArchived'>) => {
+    await saveExpense(expenseData);
     setExpenses(getExpenses());
     setLedger(getCashLedger());
     setTimelineEvents(getFinancialTimeline());
@@ -104,7 +104,7 @@ export const AdminFinanceView: React.FC = () => {
     setCostSheets(getCostSheets());
   };
 
-  const handleAddCashEntry = (entry: {
+  const handleAddCashEntry = async (entry: {
     type: 'money_in' | 'money_out';
     category: string;
     amount: number;
@@ -112,12 +112,12 @@ export const AdminFinanceView: React.FC = () => {
     relatedReference?: string;
     createdBy: string;
   }) => {
-    addCashLedgerEntry(entry);
+    await addCashLedgerEntry(entry);
     setLedger(getCashLedger());
   };
 
-  const handleAddProcurement = (itemData: Omit<ProcurementItem, 'id' | 'referenceNumber' | 'createdAt' | 'updatedAt' | 'isArchived'>) => {
-    saveProcurementItem(itemData);
+  const handleAddProcurement = async (itemData: Omit<ProcurementItem, 'id' | 'referenceNumber' | 'createdAt' | 'updatedAt' | 'isArchived'>) => {
+    await saveProcurementItem(itemData);
     setProcurementItems(getProcurementItems());
   };
 
@@ -126,8 +126,8 @@ export const AdminFinanceView: React.FC = () => {
     setProcurementItems(getProcurementItems());
   };
 
-  const handleAddSupplier = (supplierData: Omit<SupplierRecord, 'id' | 'supplierNumber' | 'purchaseCount' | 'totalSpent' | 'isArchived'>) => {
-    saveSupplier(supplierData);
+  const handleAddSupplier = async (supplierData: Omit<SupplierRecord, 'id' | 'supplierNumber' | 'purchaseCount' | 'totalSpent' | 'isArchived'>) => {
+    await saveSupplier(supplierData);
     setSuppliers(getSuppliers());
   };
 

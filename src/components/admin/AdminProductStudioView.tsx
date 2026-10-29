@@ -127,9 +127,6 @@ export const AdminProductStudioView: React.FC = () => {
     if (filters.sortBy === 'lowest_price') {
       return a.price - b.price;
     }
-    if (filters.sortBy === 'most_viewed') {
-      return (b.viewsCount || 0) - (a.viewsCount || 0);
-    }
     if (filters.sortBy === 'alphabetical') {
       return a.title.localeCompare(b.title, 'ar');
     }

@@ -5,13 +5,14 @@
 
 import { BaseRepository } from './BaseRepository';
 import { StorageAdapter } from '../storage/StorageAdapter';
-import { defaultStorageAdapter } from '../storage/LocalStorageAdapter';
+import { firestoreStorageAdapter } from '../storage/FirestoreStorageAdapter';
 import { FinancialTimelineEvent } from '../../types/adminFinance';
+import { FIRESTORE_COLLECTIONS } from '../config/FirestoreConfig';
 
-const TIMELINE_KEY = 'proteck_admin_financial_timeline_v1';
+const TIMELINE_KEY = FIRESTORE_COLLECTIONS.FINANCIAL_TIMELINE;
 
 export class FinancialTimelineRepository extends BaseRepository<FinancialTimelineEvent> {
-  constructor(storage: StorageAdapter = defaultStorageAdapter) {
+  constructor(storage: StorageAdapter = firestoreStorageAdapter) {
     super(TIMELINE_KEY, storage);
   }
 }

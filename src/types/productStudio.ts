@@ -66,20 +66,22 @@ export interface InspectionCheckitem {
 }
 
 export interface ProductPricingBreakdown {
-  purchaseCost: number;       // تكلفة الشراء
-  transportationCost: number; // النقل والشحن
-  repairCost: number;         // الصيانة وقطع الغيار
-  cleaningCost: number;       // مواد التنظيف والتعقيم
-  accessoriesCost: number;   // الملحقات المضافة
-  otherCosts: number;        // مصاريف نثرية
-  totalCost: number;          // إجمالي التكلفة الحقيقية
-  minAcceptablePrice: number; // الحد الأدنى للبيع
-  recommendedPrice: number;   // السعر المقترح
-  displayedPrice: number;     // سعر العرض المعلن
-  isNegotiable: boolean;     // قابل للتفاوض
-  expectedProfit: number;     // الربح المتوقع
-  profitMarginPercent: number;// نسبة الربح %
-  internalNotes?: string;
+  displayedPrice: number;      // سعر العرض المعلن
+  isNegotiable: boolean;      // قابل للتفاوض
+  internalNotes?: string;      // ملاحظات إدارية داخلية
+
+  // الحقول المالية التالية اختيارية للحفاظ على التوافق مع باقي أجزاء النظام التي لم يُطلب تعديلها
+  purchaseCost?: number;        // تكلفة الشراء
+  transportationCost?: number;  // النقل والشحن
+  repairCost?: number;          // الصيانة وقطع الغيار
+  cleaningCost?: number;        // مواد التنظيف والتعقيم
+  accessoriesCost?: number;    // الملحقات المضافة
+  otherCosts?: number;         // مصاريف نثرية
+  totalCost?: number;           // إجمالي التكلفة الحقيقية
+  minAcceptablePrice?: number;  // الحد الأدنى للبيع
+  recommendedPrice?: number;    // السعر المقترح
+  expectedProfit?: number;      // الربح المتوقع
+  profitMarginPercent?: number; // نسبة الربح %
 }
 
 export interface ExtendedProductAccessory {
@@ -144,7 +146,7 @@ export interface FilterProductOptions {
   archivedOnly: boolean;
   readyForSaleOnly: boolean;
   searchQuery: string;
-  sortBy: 'newest' | 'oldest' | 'highest_price' | 'lowest_price' | 'most_viewed' | 'recently_updated' | 'alphabetical';
+  sortBy: 'newest' | 'oldest' | 'highest_price' | 'lowest_price' | 'recently_updated' | 'alphabetical';
 }
 
 export interface EnrichedProduct extends Product {
@@ -156,10 +158,11 @@ export interface EnrichedProduct extends Product {
   extendedAccessories: ExtendedProductAccessory[];
   auditRecords: ProductAuditRecord[];
   aiAssistantTools?: ProductAiAssistantTools;
-  viewsCount: number;
   reservationsCount: number;
   purchaseRequestsCount: number;
   negotiationsCount: number;
   isArchived: boolean;
   lastUpdatedBy?: string;
+  soldAt?: string;
+  finalPrice?: number;
 }

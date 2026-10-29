@@ -51,7 +51,6 @@ export interface BusinessConfig {
   faviconUrl: string;
   businessPolicies: {
     warrantyPolicy: string;
-    reservationPolicy: string;
     returnPolicy: string;
     inspectionPolicy: string;
   };
@@ -92,7 +91,7 @@ export const BUSINESS_CONFIG: BusinessConfig = {
   instapay: {
     accountHandle: 'proteck.maadi@instapay',
     recipientName: 'معرض PRO TECK المعادي',
-    qrCodeUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=300&q=80',
+    qrCodeUrl: '',
   },
   socialLinks: {
     facebook: 'https://www.facebook.com/share/17yrfmNzyr/',
@@ -104,7 +103,6 @@ export const BUSINESS_CONFIG: BusinessConfig = {
   faviconUrl: '/favicon.ico',
   businessPolicies: {
     warrantyPolicy: 'جميع الأجهزة المباعة من المعرض تشمل ضمان من 6 أشهر إلى 24 شهر حسب الفئة، مع صيانة فورية واستبدال متوفر.',
-    reservationPolicy: 'يمكن حجز أي جهاز مجاناً أونلاين لموعد معاينة مدته 24 ساعة، ويتم تعليق بيعه للغير باسمك لحين المعاينة والطلب النهائي بالمعرض.',
     returnPolicy: 'حق إرجاع الجهاز خلال 14 يوماً في حالة وجود أي عيب فني غير مذكور في التقرير الشامل.',
     inspectionPolicy: 'تخضع جميع الأجهزة المستعملة لفحص فني شامل من 18 نقطة قبل العرض بالمعرض مع تسليم شهادة جودة.',
   },

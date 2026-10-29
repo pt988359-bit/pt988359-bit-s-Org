@@ -22,6 +22,7 @@ import {
   ArrowLeftRight,
 } from 'lucide-react';
 import { Product, TradeRequest } from '../types';
+import { DEFAULT_PRODUCT_PLACEHOLDER } from '../constants/placeholders';
 
 interface ProductExchangeModalProps {
   isOpen: boolean;
@@ -49,9 +50,7 @@ export const ProductExchangeModal: React.FC<ProductExchangeModalProps> = ({
   const [description, setDescription] = useState<string>('');
 
   // Media
-  const [photoUrls, setPhotoUrls] = useState<string[]>([
-    'https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?auto=format&fit=crop&w=800&q=80',
-  ]);
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [newImageUrl, setNewImageUrl] = useState<string>('');
   const [videoUrl, setVideoUrl] = useState<string>('');
 
@@ -161,8 +160,11 @@ export const ProductExchangeModal: React.FC<ProductExchangeModalProps> = ({
           <div className="p-4 rounded-2xl bg-blue-950/40 border border-blue-500/30 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <img
-                src={targetProduct.images?.[0] || 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=800&q=80'}
+                src={targetProduct.images?.[0] || DEFAULT_PRODUCT_PLACEHOLDER}
                 alt={targetProduct.title}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = DEFAULT_PRODUCT_PLACEHOLDER;
+                }}
                 className="w-16 h-16 rounded-xl object-cover border border-slate-700 shrink-0"
               />
               <div className="text-right">

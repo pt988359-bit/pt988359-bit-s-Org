@@ -51,13 +51,8 @@ export const AdminProfileSecurityModal: React.FC<AdminProfileSecurityModalProps>
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentPassword || !newPassword) return;
-    setPasswordSavedMsg(true);
-    setTimeout(() => {
-      setPasswordSavedMsg(false);
-      setCurrentPassword('');
-      setNewPassword('');
-    }, 2500);
+    // Feature disabled - prevent showing simulated success message
+    return;
   };
 
   return (
@@ -199,9 +194,14 @@ export const AdminProfileSecurityModal: React.FC<AdminProfileSecurityModalProps>
             <div className="space-y-6">
               {/* Change Password Form */}
               <form onSubmit={handlePasswordSubmit} className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
-                <h3 className="font-bold text-sm text-white border-b border-slate-800 pb-2 flex items-center gap-2">
-                  <Key className="w-4 h-4 text-emerald-400" />
-                  <span>تغيير كلمة المرور الآمنة</span>
+                <h3 className="font-bold text-sm text-white border-b border-slate-800 pb-2 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Key className="w-4 h-4 text-emerald-400" />
+                    <span>تغيير كلمة المرور الآمنة</span>
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[11px] font-bold">
+                    غير مفعّل حالياً
+                  </span>
                 </h3>
 
                 {passwordSavedMsg && (
@@ -234,12 +234,19 @@ export const AdminProfileSecurityModal: React.FC<AdminProfileSecurityModalProps>
                   </div>
                 </div>
 
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold cursor-pointer transition-all"
-                >
-                  حفظ وتحديث التشفير
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    disabled
+                    className="px-4 py-2 rounded-xl bg-slate-800 text-slate-500 border border-slate-700/60 font-bold cursor-not-allowed opacity-60 transition-all"
+                    title="تغيير كلمة المرور غير مفعّل حالياً"
+                  >
+                    حفظ وتحديث التشفير
+                  </button>
+                  <span className="text-slate-500 text-[11px]">
+                    (هذا الإجراء معطل ومحمي مؤقتاً)
+                  </span>
+                </div>
               </form>
 
               {/* 2FA Section */}
@@ -249,20 +256,23 @@ export const AdminProfileSecurityModal: React.FC<AdminProfileSecurityModalProps>
                     <ShieldCheck className="w-5 h-5" />
                   </div>
                   <div>
-                    <span className="font-bold text-white block">المصادقة الثنائية (2FA)</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-white block">المصادقة الثنائية (2FA)</span>
+                      <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[10px] font-bold">
+                        قريباً
+                      </span>
+                    </div>
                     <span className="text-slate-400 text-[11px] block">تأكيد الدخول عبر رمز أمان إضافي على الهاتف</span>
                   </div>
                 </div>
 
                 <button
-                  onClick={() => setTwoFactorEnabled(!twoFactorEnabled)}
-                  className={`px-4 py-2 rounded-xl font-bold transition-all cursor-pointer ${
-                    twoFactorEnabled
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-slate-800 text-slate-400 border border-slate-700'
-                  }`}
+                  type="button"
+                  disabled
+                  className="px-4 py-2 rounded-xl font-bold bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed opacity-60 transition-all"
+                  title="المصادقة الثنائية غير مفعّلة حالياً"
                 >
-                  {twoFactorEnabled ? 'مُفعّلة الآن' : 'تفعيل المصادقة'}
+                  غير مفعّل حالياً
                 </button>
               </div>
 
@@ -318,12 +328,19 @@ export const AdminProfileSecurityModal: React.FC<AdminProfileSecurityModalProps>
                   </div>
 
                   {!sess.isCurrent && (
-                    <button
-                      onClick={() => onTerminateSession(sess.id)}
-                      className="px-3 py-1.5 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-300 hover:bg-rose-500/30 font-bold text-xs cursor-pointer transition-all"
-                    >
-                      إنهاء الجلسة
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[10px] font-bold">
+                        غير مفعّل حالياً
+                      </span>
+                      <button
+                        type="button"
+                        disabled
+                        className="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-500 border border-slate-700/60 font-bold text-xs cursor-not-allowed opacity-60 transition-all"
+                        title="إنهاء الجلسة غير مفعّل حالياً"
+                      >
+                        إنهاء الجلسة
+                      </button>
+                    </div>
                   )}
                 </div>
               ))}

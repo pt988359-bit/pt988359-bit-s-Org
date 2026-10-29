@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   XCircle,
   MessageSquare,
-  ArrowRightLeft,
   ShieldCheck,
   Tag,
 } from 'lucide-react';
@@ -20,7 +19,6 @@ interface PurchaseRequestsWorkspaceProps {
   onSelectAll: () => void;
   onSelectOrder: (item: PurchaseRequest) => void;
   onUpdateStatus: (id: string, newStatus: string) => void;
-  onConvertToReservation: (item: PurchaseRequest) => void;
 }
 
 export const PurchaseRequestsWorkspace: React.FC<PurchaseRequestsWorkspaceProps> = ({
@@ -30,7 +28,6 @@ export const PurchaseRequestsWorkspace: React.FC<PurchaseRequestsWorkspaceProps>
   onSelectAll,
   onSelectOrder,
   onUpdateStatus,
-  onConvertToReservation,
 }) => {
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl text-xs text-slate-100 dir-rtl">
@@ -149,15 +146,6 @@ export const PurchaseRequestsWorkspace: React.FC<PurchaseRequestsWorkspaceProps>
                           className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition-all cursor-pointer"
                         >
                           <Eye className="w-3.5 h-3.5" />
-                        </button>
-
-                        <button
-                          onClick={() => onConvertToReservation(req)}
-                          title="تحويل إلى حجز"
-                          className="px-2.5 py-1.5 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 font-extrabold flex items-center gap-1 border border-purple-500/30 transition-all cursor-pointer text-[10px]"
-                        >
-                          <ArrowRightLeft className="w-3 h-3" />
-                          <span>تحويل لحجز</span>
                         </button>
                       </div>
                     </td>

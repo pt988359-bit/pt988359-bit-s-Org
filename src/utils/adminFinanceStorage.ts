@@ -32,15 +32,46 @@ import { defaultSequenceService } from '../core/services/SequenceService';
 import { DateTimeService } from '../core/services/DateTimeService';
 import { IdGenerator } from '../core/services/IdGenerator';
 import { defaultStorageAdapter } from '../core/storage/LocalStorageAdapter';
+import { FIRESTORE_COLLECTIONS } from '../core/config/FirestoreConfig';
 
-const EXPENSES_STORAGE_KEY = 'proteck_admin_expenses_v1';
-const COST_SHEETS_STORAGE_KEY = 'proteck_admin_cost_sheets_v1';
-const CASH_LEDGER_STORAGE_KEY = 'proteck_admin_cash_ledger_v1';
-const PROCUREMENT_STORAGE_KEY = 'proteck_admin_procurement_v1';
-const SUPPLIERS_STORAGE_KEY = 'proteck_admin_suppliers_v1';
-const PURCHASE_HISTORY_STORAGE_KEY = 'proteck_admin_purchase_history_v1';
-const TIMELINE_STORAGE_KEY = 'proteck_admin_financial_timeline_v1';
-const ALERTS_STORAGE_KEY = 'proteck_admin_financial_alerts_v1';
+const EXPENSES_STORAGE_KEY = FIRESTORE_COLLECTIONS.EXPENSES;
+const COST_SHEETS_STORAGE_KEY = FIRESTORE_COLLECTIONS.COST_SHEETS;
+const CASH_LEDGER_STORAGE_KEY = FIRESTORE_COLLECTIONS.CASH_LEDGERS;
+const PROCUREMENT_STORAGE_KEY = FIRESTORE_COLLECTIONS.PROCUREMENT;
+const SUPPLIERS_STORAGE_KEY = FIRESTORE_COLLECTIONS.SUPPLIERS;
+const PURCHASE_HISTORY_STORAGE_KEY = FIRESTORE_COLLECTIONS.PURCHASE_HISTORY;
+const TIMELINE_STORAGE_KEY = FIRESTORE_COLLECTIONS.FINANCIAL_TIMELINE;
+const ALERTS_STORAGE_KEY = FIRESTORE_COLLECTIONS.FINANCIAL_ALERTS;
+
+const LEGACY_STORAGE_MAP: Record<string, string> = {
+  'proteck_admin_expenses_v1': FIRESTORE_COLLECTIONS.EXPENSES,
+  'proteck_admin_cost_sheets_v1': FIRESTORE_COLLECTIONS.COST_SHEETS,
+  'proteck_admin_cash_ledger_v1': FIRESTORE_COLLECTIONS.CASH_LEDGERS,
+  'proteck_admin_procurement_v1': FIRESTORE_COLLECTIONS.PROCUREMENT,
+  'proteck_admin_suppliers_v1': FIRESTORE_COLLECTIONS.SUPPLIERS,
+  'proteck_admin_purchase_history_v1': FIRESTORE_COLLECTIONS.PURCHASE_HISTORY,
+  'proteck_admin_financial_timeline_v1': FIRESTORE_COLLECTIONS.FINANCIAL_TIMELINE,
+  'proteck_admin_financial_alerts_v1': FIRESTORE_COLLECTIONS.FINANCIAL_ALERTS,
+};
+
+export function migrateLegacyFinanceData(): void {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  try {
+    Object.entries(LEGACY_STORAGE_MAP).forEach(([legacyKey, newKey]) => {
+      const rawLegacy = window.localStorage.getItem(legacyKey);
+      if (rawLegacy && rawLegacy !== '[]' && rawLegacy !== 'null' && rawLegacy !== '{}') {
+        const rawNew = window.localStorage.getItem(newKey);
+        if (!rawNew || rawNew === '[]' || rawNew === 'null') {
+          window.localStorage.setItem(newKey, rawLegacy);
+        }
+      }
+    });
+  } catch (err) {
+    // Fail-safe
+  }
+}
+
+migrateLegacyFinanceData();
 
 // Seed initial data using StorageAdapter
 const INITIAL_EXPENSES: ExpenseItem[] = [];
@@ -60,6 +91,7 @@ const INITIAL_TIMELINE: FinancialTimelineEvent[] = [];
 const INITIAL_ALERTS: FinancialAlert[] = [];
 
 function ensureSeeded(): void {
+  migrateLegacyFinanceData();
   if (defaultStorageAdapter.getCollection(EXPENSES_STORAGE_KEY).length === 0) {
     defaultStorageAdapter.saveCollection(EXPENSES_STORAGE_KEY, INITIAL_EXPENSES);
   }
@@ -94,8 +126,8 @@ export function getExpenses(): ExpenseItem[] {
   return defaultExpenseRepository.getAll();
 }
 
-export function saveExpense(expenseData: Omit<ExpenseItem, 'id' | 'referenceNumber' | 'isArchived'>): ExpenseItem {
-  return defaultFinanceService.recordExpense({
+export async function saveExpense(expenseData: Omit<ExpenseItem, 'id' | 'referenceNumber' | 'isArchived'>): Promise<ExpenseItem> {
+  return await defaultFinanceService.recordExpense({
     category: expenseData.category,
     categoryLabelAr: expenseData.categoryLabelAr,
     amount: expenseData.amount,
@@ -143,15 +175,15 @@ export function getCashLedger(): CashLedgerEntry[] {
   return defaultCashLedgerRepository.getAll();
 }
 
-export function addCashLedgerEntry(entry: {
+export async function addCashLedgerEntry(entry: {
   type: 'money_in' | 'money_out';
   category: string;
   amount: number;
   description: string;
   relatedReference?: string;
   createdBy: string;
-}): CashLedgerEntry {
-  return defaultFinanceService.recordCashFlow(entry);
+}): Promise<CashLedgerEntry> {
+  return await defaultFinanceService.recordCashFlow(entry);
 }
 
 export function getProcurementItems(): ProcurementItem[] {
@@ -159,8 +191,8 @@ export function getProcurementItems(): ProcurementItem[] {
   return defaultProcurementRepository.getAll();
 }
 
-export function saveProcurementItem(itemData: Omit<ProcurementItem, 'id' | 'referenceNumber' | 'createdAt' | 'updatedAt' | 'isArchived'>): ProcurementItem {
-  const ref = defaultSequenceService.generateNextReference('procurement');
+export async function saveProcurementItem(itemData: Omit<ProcurementItem, 'id' | 'referenceNumber' | 'createdAt' | 'updatedAt' | 'isArchived'>): Promise<ProcurementItem> {
+  const ref = await defaultSequenceService.generateNextReference('procurement');
   const newItem: ProcurementItem = {
     ...itemData,
     id: IdGenerator.generateUniqueId('proc'),
@@ -187,8 +219,8 @@ export function getSuppliers(): SupplierRecord[] {
   return defaultSupplierRepository.getAll();
 }
 
-export function saveSupplier(supplierData: Omit<SupplierRecord, 'id' | 'supplierNumber' | 'purchaseCount' | 'totalSpent' | 'isArchived'>): SupplierRecord {
-  const ref = defaultSequenceService.generateNextReference('supplier');
+export async function saveSupplier(supplierData: Omit<SupplierRecord, 'id' | 'supplierNumber' | 'purchaseCount' | 'totalSpent' | 'isArchived'>): Promise<SupplierRecord> {
+  const ref = await defaultSequenceService.generateNextReference('supplier');
   const newSupplier: SupplierRecord = {
     ...supplierData,
     id: IdGenerator.generateUniqueId('sup'),

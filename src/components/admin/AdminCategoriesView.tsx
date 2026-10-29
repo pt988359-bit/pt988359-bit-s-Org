@@ -7,14 +7,16 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Table } from '../ui/Table';
 import { Modal } from '../ui/Modal';
-import { Layers, Plus, Trash2, Image as ImageIcon, Upload, X, Loader2 } from 'lucide-react';
+import { Layers, Plus, Trash2, Image as ImageIcon, Upload, X, Loader2, Pencil } from 'lucide-react';
 import { uploadProductImage } from '../../supabase/storageAdapter';
+import { getCategoryCover } from '../../utils/categoryVisuals';
 
 export const AdminCategoriesView: React.FC = () => {
-  const { categories, addCategory, deleteCategory } = useShowroom();
+  const { categories, addCategory, updateCategory, deleteCategory } = useShowroom();
   const { showToast } = useToast();
 
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [catName, setCatName] = useState('');
   const [catSlug, setCatSlug] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -23,6 +25,7 @@ export const AdminCategoriesView: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const resetForm = () => {
+    setEditingCategory(null);
     setCatName('');
     setCatSlug('');
     setImageFile(null);
@@ -31,6 +34,15 @@ export const AdminCategoriesView: React.FC = () => {
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+  };
+
+  const handleStartEdit = (category: Category) => {
+    setEditingCategory(category);
+    setCatName(category.name || category.arabicName || '');
+    setCatSlug(category.slug || '');
+    setImageFile(null);
+    setImagePreview(category.coverImage || null);
+    setShowAddModal(true);
   };
 
   const handleCloseModal = () => {
@@ -94,6 +106,23 @@ export const AdminCategoriesView: React.FC = () => {
       }
     }
 
+    if (editingCategory) {
+      updateCategory(editingCategory.id, {
+        name: catName.trim(),
+        arabicName: catName.trim(),
+        englishName: catSlug.trim() || catName.trim(),
+        slug: catSlug.trim() || catName.trim().toLowerCase().replace(/\s+/g, '-'),
+        seoSlug: catSlug.trim() || catName.trim().toLowerCase().replace(/\s+/g, '-'),
+        description: `قسم ${catName.trim()} المتاح بالمعرض`,
+        coverImage: coverImageUrl || editingCategory.coverImage || '',
+      });
+
+      setShowAddModal(false);
+      showToast('تم التعديل', `تم تحديث قسم (${catName.trim()}) بنجاح`, 'success');
+      resetForm();
+      return;
+    }
+
     addCategory({
       name: catName.trim(),
       arabicName: catName.trim(),
@@ -126,7 +155,10 @@ export const AdminCategoriesView: React.FC = () => {
           <Button
             variant="electric"
             size="sm"
-            onClick={() => setShowAddModal(true)}
+            onClick={() => {
+              resetForm();
+              setShowAddModal(true);
+            }}
             leftIcon={<Plus className="w-4 h-4" />}
             className="w-full sm:w-auto"
           >
@@ -143,22 +175,31 @@ export const AdminCategoriesView: React.FC = () => {
                 header: 'صورة القسم',
                 cell: (c) => (
                   <div className="w-12 h-12 rounded-lg bg-slate-800 border border-slate-700/60 overflow-hidden flex items-center justify-center shrink-0">
-                    {c.coverImage ? (
-                      <img
-                        src={c.coverImage}
-                        alt={c.name}
-                        className="w-full h-full object-cover"
-                        referrerPolicy="no-referrer"
-                      />
-                    ) : (
-                      <ImageIcon className="w-5 h-5 text-slate-500" />
-                    )}
+                    <img
+                      src={getCategoryCover(c)}
+                      alt={c.name}
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
                   </div>
                 ),
               },
               { header: 'اسم القسم', accessorKey: 'name' },
               { header: 'الرابط Slug', accessorKey: 'slug' },
               { header: 'الوصف', accessorKey: 'description' },
+              {
+                header: 'تعديل',
+                cell: (c) => (
+                  <button
+                    onClick={() => handleStartEdit(c)}
+                    className="p-2 text-blue-400 hover:bg-blue-500/10 rounded-lg cursor-pointer transition-colors min-w-[38px] min-h-[38px] flex items-center justify-center"
+                    title="تعديل القسم"
+                    aria-label="تعديل القسم"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                ),
+              },
               {
                 header: 'حذف',
                 cell: (c) => (
@@ -183,7 +224,7 @@ export const AdminCategoriesView: React.FC = () => {
       <Modal
         isOpen={showAddModal}
         onClose={handleCloseModal}
-        title="إنشاء قسم جديد بالمعرض"
+        title={editingCategory ? 'تعديل القسم' : 'إنشاء قسم جديد بالمعرض'}
       >
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 text-right">
           <Input
@@ -263,7 +304,11 @@ export const AdminCategoriesView: React.FC = () => {
               disabled={isUploading || !catName.trim()}
               leftIcon={isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : undefined}
             >
-              {isUploading ? 'جاري رفع الصورة والحفظ...' : 'حفظ القسم'}
+              {isUploading
+                ? 'جاري رفع الصورة والحفظ...'
+                : editingCategory
+                ? 'تعديل القسم'
+                : 'حفظ القسم'}
             </Button>
           </div>
         </form>

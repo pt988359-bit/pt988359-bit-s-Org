@@ -5,7 +5,7 @@
 
 import { BaseRepository } from './BaseRepository';
 import { StorageAdapter } from '../storage/StorageAdapter';
-import { defaultStorageAdapter } from '../storage/LocalStorageAdapter';
+import { firestoreStorageAdapter } from '../storage/FirestoreStorageAdapter';
 import {
   PurchaseRequest,
   ReservationItem,
@@ -16,31 +16,31 @@ import {
 import { FIRESTORE_COLLECTIONS } from '../config/FirestoreConfig';
 
 export class PurchaseRequestRepository extends BaseRepository<PurchaseRequest> {
-  constructor(storage: StorageAdapter = defaultStorageAdapter) {
+  constructor(storage: StorageAdapter = firestoreStorageAdapter) {
     super(FIRESTORE_COLLECTIONS.PURCHASE_REQUESTS, storage);
   }
 }
 
 export class ReservationRepository extends BaseRepository<ReservationItem> {
-  constructor(storage: StorageAdapter = defaultStorageAdapter) {
+  constructor(storage: StorageAdapter = firestoreStorageAdapter) {
     super(FIRESTORE_COLLECTIONS.RESERVATIONS, storage);
   }
 }
 
 export class NegotiationRepository extends BaseRepository<NegotiationItem> {
-  constructor(storage: StorageAdapter = defaultStorageAdapter) {
+  constructor(storage: StorageAdapter = firestoreStorageAdapter) {
     super(FIRESTORE_COLLECTIONS.NEGOTIATIONS, storage);
   }
 }
 
 export class InquiryRepository extends BaseRepository<InquiryItem> {
-  constructor(storage: StorageAdapter = defaultStorageAdapter) {
+  constructor(storage: StorageAdapter = firestoreStorageAdapter) {
     super(FIRESTORE_COLLECTIONS.INQUIRIES, storage);
   }
 }
 
 export class CompletedSaleRepository extends BaseRepository<CompletedSaleItem> {
-  constructor(storage: StorageAdapter = defaultStorageAdapter) {
+  constructor(storage: StorageAdapter = firestoreStorageAdapter) {
     super(FIRESTORE_COLLECTIONS.COMPLETED_SALES, storage);
   }
 }

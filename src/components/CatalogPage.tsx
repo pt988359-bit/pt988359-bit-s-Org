@@ -6,6 +6,7 @@ import { Card, CardBody } from './ui/Card';
 import { Input, Select } from './ui/Input';
 import { EmptyState } from './ui/EmptyState';
 import { Search, Eye, Filter } from 'lucide-react';
+import { DEFAULT_PRODUCT_PLACEHOLDER } from '../constants/placeholders';
 
 export const CatalogPage: React.FC = () => {
   const {
@@ -20,7 +21,6 @@ export const CatalogPage: React.FC = () => {
     setConditionFilter,
     statusFilter,
     setStatusFilter,
-    addToCart,
     settings,
   } = useShowroom();
 
@@ -52,27 +52,15 @@ export const CatalogPage: React.FC = () => {
         </div>
 
         {/* Condition Filter */}
-        <div className="w-full md:w-48">
+        <div className="w-full md:w-56">
           <Select
             value={conditionFilter}
             onChange={(e) => setConditionFilter(e.target.value as any)}
             options={[
-              { value: 'all', label: 'جميع الحالات (جديد ومستعمل)' },
-              { value: 'new', label: 'جديد بالضمان فقط' },
-              { value: 'used', label: 'مستعمل ممتاز فقط' },
-            ]}
-          />
-        </div>
-
-        {/* Status Filter */}
-        <div className="w-full md:w-48">
-          <Select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as any)}
-            options={[
-              { value: 'all', label: 'جميع الحالات الضوئية' },
-              { value: 'available', label: 'متاح للبيع الآن' },
-              { value: 'reserved', label: 'محجوز' },
+              { value: 'all', label: 'جميع الحالات' },
+              { value: 'new', label: 'جديد' },
+              { value: 'used_warranty', label: 'مستعمل بضمان الشركة' },
+              { value: 'used_no_warranty', label: 'مستعمل بدون ضمان' },
             ]}
           />
         </div>
@@ -141,16 +129,16 @@ export const CatalogPage: React.FC = () => {
             <Card key={product.id} className="overflow-hidden flex flex-col group">
               <div className="relative h-56 overflow-hidden bg-slate-100 dark:bg-slate-800">
                 <img
-                  src={product.images?.[0] || 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80'}
+                  src={product.images?.[0] || DEFAULT_PRODUCT_PLACEHOLDER}
                   alt={product.title}
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80';
+                    (e.target as HTMLImageElement).src = DEFAULT_PRODUCT_PLACEHOLDER;
                   }}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
                 <div className="absolute top-3 right-3 flex items-center gap-2">
                   <Badge condition={product.condition} />
-                  {product.condition === 'used' && product.conditionRating && (
+                  {product.condition !== 'new' && product.conditionRating && (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-900/80 text-amber-300 backdrop-blur-md">
                       تقييم الحالة {product.conditionRating}/10
                     </span>
@@ -192,24 +180,12 @@ export const CatalogPage: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <Button
                       size="sm"
-                      variant="outline"
+                      variant="electric"
                       onClick={() => navigateTo('product-detail', { productId: product.id })}
                       leftIcon={<Eye className="w-3.5 h-3.5" />}
                     >
-                      تفاصيل
+                      التفاصيل والطلب
                     </Button>
-                    {product.status === 'available' && (
-                      <Button
-                        size="sm"
-                        variant="electric"
-                        onClick={() => {
-                          addToCart(product);
-                          navigateTo('reservation');
-                        }}
-                      >
-                        احجز
-                      </Button>
-                    )}
                   </div>
                 </div>
               </CardBody>

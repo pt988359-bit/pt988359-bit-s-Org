@@ -52,7 +52,7 @@ export const Footer: React.FC = () => {
             <div>
               <h4 className="font-bold text-white text-sm">معاينة واقعية بالمعادي</h4>
               <p className="text-xs text-slate-400 mt-1">
-                احجز الجهاز وافحصه بنفسك في معرضنا بشارع 68 المعادي.
+                عاين الجهاز وافحصه بنفسك في معرضنا بشارع 68 المعادي.
               </p>
             </div>
           </div>

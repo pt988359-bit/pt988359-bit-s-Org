@@ -32,14 +32,12 @@ export const PortalDashboardView: React.FC<PortalDashboardViewProps> = ({
   const { settings } = useShowroom();
   const {
     purchaseRequests = [],
-    reservations = [],
     completedSales = [],
     documents = [],
     warranties = [],
     notifications = [],
   } = aggregatedData;
 
-  const activeReservations = reservations.filter((r: any) => r.status !== 'expired' && r.status !== 'completed');
   const activeWarranties = warranties.filter((w: any) => w.status === 'active');
 
   return (
@@ -58,7 +56,7 @@ export const PortalDashboardView: React.FC<PortalDashboardViewProps> = ({
               أهلاً بك، {session?.customerName || 'عميلنا العزيز'} 👋
             </h1>
             <p className="text-xs sm:text-sm text-slate-400 max-w-xl">
-              يمكنك متابعة كافة طلبات الشراء، الحجوزات، شهادات الضمان، وإيصالات المعاينة الخاصة بك بكل أمان.
+              يمكنك متابعة كافة طلبات الشراء، شهادات الضمان، وإيصالات الشراء الخاصة بك بكل أمان.
             </p>
           </div>
 
@@ -82,7 +80,7 @@ export const PortalDashboardView: React.FC<PortalDashboardViewProps> = ({
       </div>
 
       {/* KPI Overview Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div
           onClick={() => onNavigate('requests')}
           className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:border-blue-500 transition-all cursor-pointer group"
@@ -98,24 +96,6 @@ export const PortalDashboardView: React.FC<PortalDashboardViewProps> = ({
               {purchaseRequests.length}
             </span>
             <span className="text-[11px] text-slate-400 block mt-0.5">طلب مسجل</span>
-          </div>
-        </div>
-
-        <div
-          onClick={() => onNavigate('reservations')}
-          className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:border-amber-500 transition-all cursor-pointer group"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400">الحجوزات النشطة</span>
-            <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform">
-              <Clock className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl font-black text-slate-900 dark:text-white">
-              {activeReservations.length}
-            </span>
-            <span className="text-[11px] text-amber-500 font-medium block mt-0.5">قيد الانتظار والمعاينة</span>
           </div>
         </div>
 
@@ -156,37 +136,6 @@ export const PortalDashboardView: React.FC<PortalDashboardViewProps> = ({
         </div>
       </div>
 
-      {/* Active Reservation Live Banner if available */}
-      {activeReservations.length > 0 && (
-        <div className="p-5 sm:p-6 rounded-2xl bg-amber-500/10 border border-amber-500/30 dark:bg-amber-950/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <div className="p-3 rounded-2xl bg-amber-500 text-slate-950 shrink-0 mt-1 sm:mt-0">
-              <Clock className="w-6 h-6 animate-spin-slow" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-bold text-slate-900 dark:text-amber-200 text-sm sm:text-base">
-                  حجز نشط مؤكد: {activeReservations[0].productTitle}
-                </h3>
-                <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[10px] font-bold">
-                  {activeReservations[0].reservationNumber}
-                </span>
-              </div>
-              <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
-                سعر الجهاز للمعاينة والاستلام بالمعرض: <span className="font-bold text-emerald-600">{activeReservations[0].productPrice.toLocaleString('ar-EG')} ج.م</span>
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={() => onNavigate('reservations')}
-            className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs transition-colors shrink-0 cursor-pointer"
-          >
-            تفاصيل الحجز وإيصال التأكيد
-          </button>
-        </div>
-      )}
-
       {/* Main Grid Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column (2 Cols): Recent Requests & Documents */}
@@ -196,7 +145,7 @@ export const PortalDashboardView: React.FC<PortalDashboardViewProps> = ({
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2">
                 <ShoppingBag className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                <h3 className="font-bold text-base text-slate-900 dark:text-white">أحدث طلبات الشراء والحجز</h3>
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">أحدث طلبات الشراء</h3>
               </div>
               <button
                 onClick={() => onNavigate('requests')}
@@ -321,7 +270,7 @@ export const PortalDashboardView: React.FC<PortalDashboardViewProps> = ({
             </div>
 
             <p className="text-xs text-slate-300 leading-relaxed">
-              يسعدنا استقبالكم {settings.workingHours.text} لتجربة ومعاينة الأجهزة المحجوزة.
+              يسعدنا استقبالكم {settings.workingHours.text} لتجربة ومعاينة أجهزتكم وطلباتكم المحددة.
             </p>
 
             <div className="flex flex-col gap-2.5 pt-1">
