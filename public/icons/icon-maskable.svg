@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="50%" stop-color="#090d16" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60a5fa" />
+      <stop offset="100%" stop-color="#2563eb" />
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="30%" r="60%">
+      <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.35" />
+      <stop offset="100%" stop-color="#3b82f6" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <!-- Full square background for maskable -->
+  <rect width="512" height="512" fill="url(#bgGrad)" />
+  <rect width="512" height="512" fill="url(#glow)" />
+
+  <!-- Inner content scaled to 78% for safe zone -->
+  <g transform="translate(256, 256) scale(0.78) translate(-256, -256)">
+    <rect x="24" y="24" width="464" height="464" rx="80" fill="none" stroke="#3b82f6" stroke-width="6" stroke-opacity="0.3" />
+    <g transform="translate(0, -10)">
+      <path d="M 256 80 L 400 160 L 400 320 L 256 400 L 112 320 L 112 160 Z" fill="none" stroke="#1e293b" stroke-width="6" stroke-dasharray="16 8" />
+      <path d="M 145 155 L 235 155 C 275 155 295 175 295 215 C 295 255 275 275 235 275 L 195 275 L 195 345 L 145 345 Z M 195 200 L 195 230 L 230 230 C 245 230 250 225 250 215 C 250 205 245 200 230 200 Z" fill="url(#primaryGrad)" />
+      <path d="M 280 155 L 375 155 L 375 200 L 350 200 L 350 345 L 305 345 L 305 200 L 280 200 Z" fill="#ffffff" />
+      <circle cx="327" cy="130" r="12" fill="#38bdf8" />
+    </g>
+    <rect x="176" y="380" width="160" height="40" rx="12" fill="#1e293b" stroke="#3b82f6" stroke-width="2" stroke-opacity="0.4" />
+    <text x="256" y="407" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="900" fill="#38bdf8" text-anchor="middle" letter-spacing="4">ADMIN</text>
+  </g>
+</svg>

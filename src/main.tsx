@@ -14,3 +14,17 @@ createRoot(document.getElementById('root')!).render(
     </ErrorBoundary>
   </StrictMode>,
 );
+
+// Register minimal PWA service worker in production only
+if (process.env.NODE_ENV === 'production' && typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    try {
+      navigator.serviceWorker.register('/sw.js').catch((err) => {
+        console.warn('ServiceWorker registration failed:', err);
+      });
+    } catch (err) {
+      console.warn('ServiceWorker error:', err);
+    }
+  });
+}
+

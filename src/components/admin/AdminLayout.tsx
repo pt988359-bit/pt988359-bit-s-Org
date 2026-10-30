@@ -3,6 +3,7 @@ import { useShowroom } from '../../context/ShowroomContext';
 import { AdminSidebar } from './AdminSidebar';
 import { AdminHeader } from './AdminHeader';
 import { Skeleton } from '../ui/Skeleton';
+import { Smartphone, Download } from 'lucide-react';
 
 // Lazy loaded Sub-views
 const AdminDashboardView = lazy(() => import('./AdminDashboardView').then(m => ({ default: m.AdminDashboardView })));
@@ -82,6 +83,41 @@ export const AdminLayout: React.FC = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // PWA Install Prompt State
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+
+    const handleAppInstalled = () => {
+      setInstallPrompt(null);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!installPrompt) return;
+    try {
+      await installPrompt.prompt();
+      const choiceResult = await installPrompt.userChoice;
+      if (choiceResult && choiceResult.outcome === 'accepted') {
+        setInstallPrompt(null);
+      }
+    } catch (err) {
+      console.error('Install prompt error:', err);
+    }
+  };
 
   // Global Keyboard Shortcut Listener for Ctrl+K / Cmd+K
   useEffect(() => {
@@ -219,7 +255,31 @@ export const AdminLayout: React.FC = () => {
           onOpenProfileSecurity={() => setProfileSecurityOpen(true)}
           onOpenSystemStatus={() => setSystemStatusOpen(true)}
           pendingApprovalCount={pendingApprovalCount}
+          installPrompt={installPrompt}
+          onInstallApp={handleInstallClick}
         />
+
+        {/* Mobile PWA Install Banner (Only rendered on mobile when installPrompt is active) */}
+        {installPrompt && (
+          <div className="sm:hidden bg-gradient-to-r from-blue-900/90 via-indigo-950/90 to-slate-900 border-b border-blue-500/30 px-3.5 py-2.5 flex items-center justify-between text-xs text-white shadow-md animate-fadeIn">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-blue-500/20 text-blue-400">
+                <Smartphone className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="font-bold text-white text-[11px]">تثبيت تطبيق PRO TECK Admin</p>
+                <p className="text-[10px] text-blue-200">لتجربة شاشة كاملة وسرعة وصول</p>
+              </div>
+            </div>
+            <button
+              onClick={handleInstallClick}
+              className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-[11px] shadow-md transition-all cursor-pointer flex items-center gap-1 shrink-0"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>تثبيت التطبيق</span>
+            </button>
+          </div>
+        )}
 
         {/* Page Content Container */}
         <main className="flex-1 p-3 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">

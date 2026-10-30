@@ -18,6 +18,8 @@ import {
   Clock,
   Lock,
   Sliders,
+  Smartphone,
+  Download,
 } from 'lucide-react';
 
 interface AdminHeaderProps {
@@ -29,6 +31,8 @@ interface AdminHeaderProps {
   onOpenProfileSecurity: () => void;
   onOpenSystemStatus: () => void;
   pendingApprovalCount: number;
+  installPrompt?: any;
+  onInstallApp?: () => void;
 }
 
 export const AdminHeader: React.FC<AdminHeaderProps> = ({
@@ -40,6 +44,8 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   onOpenProfileSecurity,
   onOpenSystemStatus,
   pendingApprovalCount,
+  installPrompt,
+  onInstallApp,
 }) => {
   const { currentRoute, navigateTo } = useShowroom();
   const { currentUser, logout } = useAuth();
@@ -184,6 +190,18 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
           <span>الموقع العام</span>
           <ExternalLink className="w-3.5 h-3.5" />
         </button>
+
+        {/* PWA Mobile App Install Button (Only rendered when beforeinstallprompt is active) */}
+        {installPrompt && onInstallApp && (
+          <button
+            onClick={onInstallApp}
+            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 hover:from-blue-500 hover:to-indigo-400 text-white text-xs font-black transition-all cursor-pointer shadow-lg shadow-blue-600/30 flex items-center gap-1.5 animate-pulse min-h-[38px] shrink-0 border border-blue-400/40"
+            title="تثبيت لوحة الإدارة كتطبيق هاتف مستقل"
+          >
+            <Smartphone className="w-4 h-4 text-white shrink-0" />
+            <span className="whitespace-nowrap">تثبيت التطبيق</span>
+          </button>
+        )}
 
         {/* User Profile Dropdown Menu */}
         <div className="relative">
