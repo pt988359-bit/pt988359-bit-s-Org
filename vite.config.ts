@@ -3,6 +3,13 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
 
+// Sanitize process.env to remove any malformed environment variables (e.g. prompt text injected with VITE_ prefix)
+for (const key of Object.keys(process.env)) {
+  if (key.startsWith('VITE_') && !/^[A-Za-z0-9_]+$/.test(key)) {
+    delete process.env[key];
+  }
+}
+
 export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss()],

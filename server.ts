@@ -22,6 +22,13 @@ import { APP_CONFIG } from './src/core/config/appConfig';
 
 dotenv.config();
 
+// Sanitize process.env to remove any malformed environment variables
+for (const key of Object.keys(process.env)) {
+  if (key.startsWith('VITE_') && !/^[A-Za-z0-9_]+$/.test(key)) {
+    delete process.env[key];
+  }
+}
+
 // In-memory customer identity cache to ensure instant, crash-proof customer login
 const inMemoryCustomerCache = new Map<string, any>();
 
