@@ -118,7 +118,8 @@ export type CustomerDocumentType =
   | 'purchase_request_receipt'
   | 'reservation_receipt'
   | 'exchange_request_receipt'
-  | 'inquiry_receipt';
+  | 'inquiry_receipt'
+  | 'purchase_receipt';
 
 export interface CustomerDocument {
   id: string;

@@ -258,8 +258,79 @@ export const MyActivityPage: React.FC = () => {
     return list.sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
   }, [localData.timelineEvents, serverRequests]);
 
+  const mergedDocuments = useMemo(() => {
+    const list: any[] = [...(localData.documents || [])];
+    const seenRefs = new Set(
+      list
+        .map((d: any) => d.relatedReference || d.referenceNumber)
+        .filter(Boolean)
+    );
+
+    // 1. Local purchase requests (type === 'purchase' only)
+    const localPurchases = (localData.purchaseRequests || []).filter(
+      (p: any) => !p.type || p.type === 'purchase'
+    );
+
+    // 2. Server purchase requests (type === 'purchase' only)
+    const serverPurchases = serverRequests.filter((r) => r.type === 'purchase');
+
+    // Combine distinct purchase requests
+    const allPurchases: any[] = [...localPurchases];
+    const localRefCodes = new Set(localPurchases.map((p: any) => p.referenceNumber || p.id));
+
+    serverPurchases.forEach((sp) => {
+      const ref = sp.referenceNumber || sp.id;
+      if (!localRefCodes.has(ref)) {
+        localRefCodes.add(ref);
+        allPurchases.push({
+          id: sp.id,
+          referenceNumber: ref,
+          productTitle: sp.productTitle || sp.details?.productTitle || 'جهاز من المعرض',
+          productPrice: sp.productPrice || sp.amount || 0,
+          requestedDate: sp.createdAt || new Date().toISOString(),
+          customerName: sp.customer?.name || customer.name,
+          customerPhone: sp.customer?.phone || customerPhone,
+        });
+      }
+    });
+
+    // Create a purchase receipt document for each purchase request
+    allPurchases.forEach((pr: any) => {
+      const ref = pr.referenceNumber || pr.id;
+      if (!ref) return;
+
+      if (!seenRefs.has(ref)) {
+        seenRefs.add(ref);
+        list.push({
+          id: `doc-pr-${pr.id || ref}`,
+          type: 'purchase_receipt',
+          title: 'إيصال طلب شراء',
+          documentNumber: `REC-${ref}`,
+          issueDate: pr.requestedDate || pr.createdAt || new Date().toISOString(),
+          relatedReference: ref,
+          referenceNumber: ref,
+          amount: pr.productPrice || 0,
+          productPrice: pr.productPrice || 0,
+          productTitle: pr.productTitle || 'جهاز من المعرض',
+          customerName: pr.customerName || customer.name || 'عميل المعرض',
+          customerPhone: pr.customerPhone || customerPhone,
+          status: 'قيد المعالجة',
+          termsAndConditions: [
+            'هذا الإيصال توثيق رسمي لتسجيل رغبة الشراء لدى معرض PRO TECK.',
+            'حق المعاينة والتجربة الفنية المباشرة مكفول بالكامل داخل المعرض بالمعادي.',
+            'سيتم التواصل مع سيادتكم لتأكيد موعد المعاينة والاستلام.',
+          ],
+          details: pr,
+        });
+      }
+    });
+
+    return list.sort((a, b) => new Date(b.issueDate || 0).getTime() - new Date(a.issueDate || 0).getTime());
+  }, [localData.documents, localData.purchaseRequests, serverRequests, customer.name, customerPhone]);
+
   const data = {
     ...localData,
+    documents: mergedDocuments,
     timelineEvents: mergedTimeline,
     purchaseRequests: mergedPurchaseRequests,
     sellRequests: mergedSellRequests,

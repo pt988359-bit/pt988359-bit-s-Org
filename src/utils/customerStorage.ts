@@ -10,6 +10,7 @@ import { firestoreStorageAdapter } from '../core/storage/FirestoreStorageAdapter
 import { defaultCustomerActivityRepository } from '../core/repositories/CustomerRepository';
 import { LoggerService } from '../core/services/LoggerService';
 import { IdGenerator } from '../core/services/IdGenerator';
+import { normalizePhoneForMatching } from './customerStats';
 
 const STORAGE_KEY = 'proteck_customer_activity_v1';
 const FAVORITES_KEY = 'proteck_favorites_v1';
@@ -28,9 +29,16 @@ function getInitialActivity(): CustomerActivitySummary {
   };
 }
 
-export function getCustomerActivity(): CustomerActivitySummary {
+export function getCustomerActivity(customerPhone?: string): CustomerActivitySummary {
+  const normalized = normalizePhoneForMatching(customerPhone);
+  if (!normalized) {
+    LoggerService.warn('customerStorage', 'getCustomerActivity called with empty or invalid customerPhone');
+    return getInitialActivity();
+  }
+  const activityId = `activity-${normalized}`;
+  const storageKey = `${STORAGE_KEY}_${normalized}`;
   try {
-    const repoItem = defaultCustomerActivityRepository.getById('current_activity');
+    const repoItem = defaultCustomerActivityRepository.getById(activityId);
     if (repoItem) {
       return {
         purchaseRequests: repoItem.purchaseRequests || [],
@@ -42,7 +50,7 @@ export function getCustomerActivity(): CustomerActivitySummary {
         recentlyViewed: getRecentlyViewed(),
       };
     }
-    const parsed = firestoreStorageAdapter.getItem<CustomerActivitySummary>(STORAGE_KEY);
+    const parsed = firestoreStorageAdapter.getItem<CustomerActivitySummary>(storageKey);
     if (!parsed) return getInitialActivity();
     return {
       purchaseRequests: parsed.purchaseRequests || [],
@@ -54,17 +62,24 @@ export function getCustomerActivity(): CustomerActivitySummary {
       recentlyViewed: getRecentlyViewed(),
     };
   } catch (e) {
-    LoggerService.error('customerStorage', 'Failed to read customer activity from storage', e);
+    LoggerService.error('customerStorage', `Failed to read customer activity from storage for ${activityId}`, e);
     return getInitialActivity();
   }
 }
 
-function saveCustomerActivity(data: CustomerActivitySummary) {
+function saveCustomerActivity(customerPhone: string, data: CustomerActivitySummary): void {
+  const normalized = normalizePhoneForMatching(customerPhone);
+  if (!normalized) {
+    LoggerService.warn('customerStorage', 'saveCustomerActivity skipped: empty or invalid customerPhone');
+    return;
+  }
+  const activityId = `activity-${normalized}`;
+  const storageKey = `${STORAGE_KEY}_${normalized}`;
   try {
-    firestoreStorageAdapter.setItem(STORAGE_KEY, data);
-    defaultCustomerActivityRepository.save({ id: 'current_activity', ...data });
+    firestoreStorageAdapter.setItem(storageKey, data);
+    defaultCustomerActivityRepository.save({ id: activityId, ...data });
   } catch (e) {
-    LoggerService.error('customerStorage', 'Failed to save customer activity to storage', e);
+    LoggerService.error('customerStorage', `Failed to save customer activity to storage for ${activityId}`, e);
   }
 }
 
@@ -77,7 +92,8 @@ export function generateReferenceNumber(prefix: 'PUR' | 'RES' | 'NEG' | 'INQ' | 
 
 // 1. Purchase Request
 export function savePurchaseRequest(req: PurchaseRequestRecord): CustomerDocument {
-  const activity = getCustomerActivity();
+  const phone = req.customer?.phone || '';
+  const activity = getCustomerActivity(phone);
   activity.purchaseRequests.unshift(req);
 
   const doc: CustomerDocument = {
@@ -100,13 +116,14 @@ export function savePurchaseRequest(req: PurchaseRequestRecord): CustomerDocumen
   };
 
   activity.documents.unshift(doc);
-  saveCustomerActivity(activity);
+  saveCustomerActivity(phone, activity);
   return doc;
 }
 
 // 2. Reservation Request (Free 24 Hours)
 export function saveReservationRequest(req: ReservationRequestRecord): CustomerDocument {
-  const activity = getCustomerActivity();
+  const phone = req.customer?.phone || '';
+  const activity = getCustomerActivity(phone);
   activity.reservations.unshift(req);
 
   const doc: CustomerDocument = {
@@ -131,13 +148,14 @@ export function saveReservationRequest(req: ReservationRequestRecord): CustomerD
   };
 
   activity.documents.unshift(doc);
-  saveCustomerActivity(activity);
+  saveCustomerActivity(phone, activity);
   return doc;
 }
 
 // 3. Negotiation Request
 export function saveNegotiationRequest(neg: NegotiationRequestRecord): CustomerDocument {
-  const activity = getCustomerActivity();
+  const phone = neg.customer?.phone || '';
+  const activity = getCustomerActivity(phone);
   activity.negotiations.unshift(neg);
 
   const doc: CustomerDocument = {
@@ -159,13 +177,14 @@ export function saveNegotiationRequest(neg: NegotiationRequestRecord): CustomerD
   };
 
   activity.documents.unshift(doc);
-  saveCustomerActivity(activity);
+  saveCustomerActivity(phone, activity);
   return doc;
 }
 
 // 4. Inquiry Request
 export function saveInquiryRequest(inq: InquiryRequestRecord): CustomerDocument {
-  const activity = getCustomerActivity();
+  const phone = inq.customer?.phone || '';
+  const activity = getCustomerActivity(phone);
   activity.inquiries.unshift(inq);
 
   const doc: CustomerDocument = {
@@ -186,7 +205,7 @@ export function saveInquiryRequest(inq: InquiryRequestRecord): CustomerDocument 
   };
 
   activity.documents.unshift(doc);
-  saveCustomerActivity(activity);
+  saveCustomerActivity(phone, activity);
   return doc;
 }
 

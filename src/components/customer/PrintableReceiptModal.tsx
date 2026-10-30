@@ -93,7 +93,7 @@ export const PrintableReceiptModal: React.FC<PrintableReceiptModalProps> = ({
               <div className="p-2 bg-slate-50 border border-slate-200 rounded-xl inline-block text-center">
                 <QrCode className="w-12 h-12 text-slate-800 mx-auto" />
                 <span className="text-[9px] font-mono font-bold text-slate-500 block mt-1">
-                  {document.referenceNumber}
+                  {document.referenceNumber || (document as any).relatedReference || (document as any).documentNumber}
                 </span>
               </div>
             </div>
@@ -111,7 +111,7 @@ export const PrintableReceiptModal: React.FC<PrintableReceiptModalProps> = ({
             <div className="text-right sm:text-left space-y-0.5">
               <span className="text-xs text-slate-500 font-bold block">رقم المرجع الإداري:</span>
               <span className="text-sm font-black font-mono text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded border border-blue-200 inline-block">
-                {document.referenceNumber}
+                {document.referenceNumber || (document as any).relatedReference || (document as any).documentNumber}
               </span>
               <span className="text-[10px] text-slate-400 block mt-1">
                 تاريخ الإصدار: {new Date(document.issueDate).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
@@ -156,7 +156,7 @@ export const PrintableReceiptModal: React.FC<PrintableReceiptModalProps> = ({
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">سعر المعرض المعتمد:</span>
-                  <span className="font-mono font-bold text-slate-900">{document.productPrice?.toLocaleString()} {settings.currencySymbol}</span>
+                  <span className="font-mono font-bold text-slate-900">{((document.productPrice ?? (document as any).amount) || 0).toLocaleString()} {settings.currencySymbol}</span>
                 </div>
                 {document.remainingAmount !== undefined && (
                   <div className="flex justify-between text-slate-700 font-bold">
@@ -175,7 +175,10 @@ export const PrintableReceiptModal: React.FC<PrintableReceiptModalProps> = ({
               الشروط والأحكام وسياسة المعاينة:
             </h4>
             <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-600 leading-relaxed">
-              {document.termsAndConditions.map((term, idx) => (
+              {(document.termsAndConditions || [
+                'هذا الإيصال توثيق رسمي لحفظ بيانات العملية لدى معرض PRO TECK.',
+                'حق المعاينة والتجربة المباشرة مكفول بالكامل داخل معرض PRO TECK بالمعادي.',
+              ]).map((term, idx) => (
                 <li key={idx}>{term}</li>
               ))}
             </ul>

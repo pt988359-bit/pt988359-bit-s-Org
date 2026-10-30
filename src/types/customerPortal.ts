@@ -40,7 +40,7 @@ export interface PortalSupportMessage {
 
 export interface PortalCustomerDocument {
   id: string;
-  type: 'reservation_receipt' | 'invoice' | 'warranty_certificate';
+  type: 'reservation_receipt' | 'invoice' | 'warranty_certificate' | 'purchase_receipt';
   title: string;
   documentNumber: string;
   issueDate: string;
