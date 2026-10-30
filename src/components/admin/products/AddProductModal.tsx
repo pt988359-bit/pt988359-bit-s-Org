@@ -33,6 +33,8 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   const [imageUrl, setImageUrl] = useState('');
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleProductImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,88 +72,98 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current) return;
     if (!title) return;
 
-    const newId = IdGenerator.generateUniqueId('prod');
-    const internalCode = await defaultSequenceService.generateNextReference('product');
+    submittingRef.current = true;
+    setIsSubmitting(true);
 
-    const normState = normalizeLifecycleState('available');
+    try {
+      const newId = IdGenerator.generateUniqueId('prod');
+      const internalCode = await defaultSequenceService.generateNextReference('product');
 
-    const createdProduct: EnrichedProduct = {
-      id: newId,
-      internalCode,
-      qrCode: `QR-${internalCode}`,
-      barcode: `622${Date.now().toString().slice(-9)}`,
-      title,
-      shortName: title.split(' ')[0],
-      categoryId,
-      brand,
-      model: model || 'N/A',
-      price: Number(price),
-      description,
-      publicDescription: description,
-      condition,
-      images: imageUrl.trim() ? [imageUrl.trim()] : [],
-      videos: [],
-      ...normState,
-      isNegotiable: true,
-      warrantyAvailable: condition === 'used_warranty' || !!warrantyImageUrl,
-      warrantyImageUrl: warrantyImageUrl.trim() || undefined,
-      warrantyCardAvailable: condition === 'used_warranty' || !!warrantyImageUrl,
-      reservationsCount: 0,
-      purchaseRequestsCount: 0,
-      negotiationsCount: 0,
-      isArchived: false,
-      mediaAlbums: [],
-      extendedAccessories: [],
-      showroomLocation: 'فرع المعادي شارع 68',
-      arrivalDate: new Date().toLocaleDateString('ar-EG'),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      specs: [
-        { label: 'سعة الجهاز', value: '450 لتر' },
-        { label: 'تكنولوجيا التبريد', value: 'انفرتر نوفروست' },
-      ],
-      warranty: {
-        available: condition === 'used_warranty' || !!warrantyImageUrl,
-        details: condition === 'used_warranty' ? 'بطاقة الضمان متوفرة' : 'بدون ضمان',
-      },
-      pricingBreakdown: {
-        purchaseCost: Math.round(price * 0.7),
-        transportationCost: 500,
-        repairCost: 300,
-        cleaningCost: 200,
-        accessoriesCost: 0,
-        otherCosts: 0,
-        totalCost: Math.round(price * 0.72),
-        minAcceptablePrice: Math.round(price * 0.85),
-        recommendedPrice: price,
-        displayedPrice: price,
+      const normState = normalizeLifecycleState('available');
+
+      const createdProduct: EnrichedProduct = {
+        id: newId,
+        internalCode,
+        qrCode: `QR-${internalCode}`,
+        barcode: `622${Date.now().toString().slice(-9)}`,
+        title,
+        shortName: title.split(' ')[0],
+        categoryId,
+        brand,
+        model: model || 'N/A',
+        price: Number(price),
+        description,
+        publicDescription: description,
+        condition,
+        images: imageUrl.trim() ? [imageUrl.trim()] : [],
+        videos: [],
+        ...normState,
         isNegotiable: true,
-        expectedProfit: Math.round(price * 0.28),
-        profitMarginPercent: 28,
-      },
-      inspectionChecklist: [],
-      healthScores: {
-        generalScore: 98,
-        technicalScore: 100,
-        appearanceScore: 95,
-        overallScore: 98,
-      },
-      auditRecords: [
-        {
-          id: `audit-${Date.now()}`,
-          date: new Date().toLocaleString('ar-EG'),
-          adminName: 'PRO TECK Admin',
-          adminRole: 'Super Admin',
-          action: 'إنشاء ملف جهاز جديد بالنظام',
-          newValue: title,
-          reason: 'إضافة جهاز جديد للمعرض',
+        warrantyAvailable: condition === 'used_warranty' || !!warrantyImageUrl,
+        warrantyImageUrl: warrantyImageUrl.trim() || undefined,
+        warrantyCardAvailable: condition === 'used_warranty' || !!warrantyImageUrl,
+        reservationsCount: 0,
+        purchaseRequestsCount: 0,
+        negotiationsCount: 0,
+        isArchived: false,
+        mediaAlbums: [],
+        extendedAccessories: [],
+        showroomLocation: 'فرع المعادي شارع 68',
+        arrivalDate: new Date().toLocaleDateString('ar-EG'),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        specs: [
+          { label: 'سعة الجهاز', value: '450 لتر' },
+          { label: 'تكنولوجيا التبريد', value: 'انفرتر نوفروست' },
+        ],
+        warranty: {
+          available: condition === 'used_warranty' || !!warrantyImageUrl,
+          details: condition === 'used_warranty' ? 'بطاقة الضمان متوفرة' : 'بدون ضمان',
         },
-      ],
-    };
+        pricingBreakdown: {
+          purchaseCost: Math.round(price * 0.7),
+          transportationCost: 500,
+          repairCost: 300,
+          cleaningCost: 200,
+          accessoriesCost: 0,
+          otherCosts: 0,
+          totalCost: Math.round(price * 0.72),
+          minAcceptablePrice: Math.round(price * 0.85),
+          recommendedPrice: price,
+          displayedPrice: price,
+          isNegotiable: true,
+          expectedProfit: Math.round(price * 0.28),
+          profitMarginPercent: 28,
+        },
+        inspectionChecklist: [],
+        healthScores: {
+          generalScore: 98,
+          technicalScore: 100,
+          appearanceScore: 95,
+          overallScore: 98,
+        },
+        auditRecords: [
+          {
+            id: `audit-${Date.now()}`,
+            date: new Date().toLocaleString('ar-EG'),
+            adminName: 'PRO TECK Admin',
+            adminRole: 'Super Admin',
+            action: 'إنشاء ملف جهاز جديد بالنظام',
+            newValue: title,
+            reason: 'إضافة جهاز جديد للمعرض',
+          },
+        ],
+      };
 
-    onAddProduct(createdProduct);
+      onAddProduct(createdProduct);
+    } catch (err) {
+      console.error('Failed to create product', err);
+      submittingRef.current = false;
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -335,10 +347,24 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
             </button>
             <button
               type="submit"
-              className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold transition-all cursor-pointer flex items-center gap-2 shadow-lg shadow-blue-600/30"
+              disabled={isSubmitting}
+              className={`px-6 py-2.5 rounded-xl bg-blue-600 text-white font-extrabold transition-all flex items-center gap-2 shadow-lg shadow-blue-600/30 ${
+                isSubmitting
+                  ? 'opacity-60 cursor-not-allowed'
+                  : 'hover:bg-blue-500 cursor-pointer'
+              }`}
             >
-              <Save className="w-4 h-4" />
-              <span>إضافة الجهاز للنظام</span>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  <span>جاري الحفظ...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>إضافة الجهاز للنظام</span>
+                </>
+              )}
             </button>
           </div>
         </form>

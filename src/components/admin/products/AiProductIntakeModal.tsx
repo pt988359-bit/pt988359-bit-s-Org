@@ -53,6 +53,7 @@ export const AiProductIntakeModal: React.FC<AiProductIntakeModalProps> = ({
   const [extractedData, setExtractedData] = useState<ExtractedProductData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isCreatingProduct, setIsCreatingProduct] = useState(false);
+  const creatingProductRef = useRef(false);
 
   // Cancellation controller
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -218,11 +219,15 @@ export const AiProductIntakeModal: React.FC<AiProductIntakeModalProps> = ({
 
   // Create Product upon Admin Approval
   const handleApproveAndCreate = async () => {
-    if (isCreatingProduct || !extractedData) return;
+    if (creatingProductRef.current || isCreatingProduct || !extractedData) return;
+    creatingProductRef.current = true;
     setIsCreatingProduct(true);
     try {
       const { product } = await AiExtractionService.buildProductFromExtractedData(extractedData, 'PRO TECK Admin');
       onAddProduct(product);
+    } catch (err) {
+      console.error('Failed to create product from AI intake', err);
+      creatingProductRef.current = false;
     } finally {
       setIsCreatingProduct(false);
     }
