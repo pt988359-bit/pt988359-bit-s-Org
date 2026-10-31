@@ -42,17 +42,17 @@ export const HomePage: React.FC = () => {
   return (
     <div className="flex flex-col gap-16 pb-12">
       {/* Top Main Hero Section */}
-      <section className="relative bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-[32px] p-8 sm:p-12 md:p-16 overflow-hidden shadow-xl shadow-slate-200/50 dark:shadow-none">
+      <section className="relative bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-[32px] px-5 py-8 sm:p-12 md:p-16 overflow-hidden shadow-xl shadow-slate-200/50 dark:shadow-none">
         {/* Decorative Blurred Element */}
         <div className="absolute -right-20 -top-20 w-96 h-96 bg-blue-50 dark:bg-blue-900/20 rounded-full blur-[100px] opacity-60 pointer-events-none" />
 
-        <div className="relative z-10 max-w-2xl flex flex-col items-start gap-6">
+        <div className="relative z-10 max-w-2xl flex flex-col items-start gap-6 w-full">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/80 border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 text-xs font-bold">
             <Sparkles className="w-4 h-4" />
             <span>معرض الأجهزة المنزلية بقلب المعادي</span>
           </div>
 
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white leading-tight tracking-tight">
+          <h1 className="text-2xl min-[400px]:text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white leading-tight tracking-tight">
             مستقبل الأجهزة المنزلية <br />
             <span className="text-blue-600 dark:text-blue-400">في قلب المعادي.</span>
           </h1>

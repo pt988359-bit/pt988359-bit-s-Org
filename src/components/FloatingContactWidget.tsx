@@ -15,10 +15,10 @@ export const FloatingContactWidget: React.FC = () => {
   const secondaryPhoneNormalized = normalizeEgyptianPhone(secondaryPhone);
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3 font-sans dir-rtl">
+    <div className="fixed bottom-4 left-4 sm:bottom-6 sm:right-6 sm:left-auto z-50 flex flex-col items-start sm:items-end gap-3 font-sans dir-rtl">
       {/* Expanded Quick Contact Panel */}
       {isOpen && (
-        <div className="bg-slate-900/95 text-white backdrop-blur-xl border border-slate-700/80 rounded-2xl p-4 shadow-2xl w-80 flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-5 duration-200">
+        <div className="bg-slate-900/95 text-white backdrop-blur-xl border border-slate-700/80 rounded-2xl p-4 shadow-2xl w-[calc(100vw-2rem)] max-w-xs sm:w-80 flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-5 duration-200">
           <div className="flex items-center justify-between pb-2 border-b border-slate-800">
             <div>
               <h4 className="font-bold text-sm text-white flex items-center gap-2">
@@ -113,14 +113,14 @@ export const FloatingContactWidget: React.FC = () => {
       {/* Main Trigger Floating Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="group relative flex items-center gap-2 px-4 py-3 rounded-full bg-gradient-to-r from-emerald-600 via-emerald-500 to-blue-600 text-white font-extrabold text-xs shadow-xl shadow-emerald-600/30 hover:scale-105 active:scale-95 transition-all cursor-pointer border border-emerald-400/30"
+        className="group relative flex items-center gap-1.5 sm:gap-2 px-3 py-2 sm:px-4 sm:py-3 rounded-full bg-gradient-to-r from-emerald-600 via-emerald-500 to-blue-600 text-white font-extrabold text-[11px] sm:text-xs shadow-xl shadow-emerald-600/30 hover:scale-105 active:scale-95 transition-all cursor-pointer border border-emerald-400/30"
       >
         <div className="relative">
-          <MessageCircle className="w-5 h-5 animate-pulse" />
-          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-slate-900"></span>
+          <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" />
+          <span className="absolute -top-1 -right-1 w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-emerald-400 ring-2 ring-slate-900"></span>
         </div>
-        <span>تواصل معنا الان</span>
-        {isOpen ? <X className="w-4 h-4 ml-1" /> : <ChevronUp className="w-4 h-4 ml-1" />}
+        <span>تواصل معنا</span>
+        {isOpen ? <X className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-0.5 sm:ml-1" /> : <ChevronUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-0.5 sm:ml-1" />}
       </button>
     </div>
   );
