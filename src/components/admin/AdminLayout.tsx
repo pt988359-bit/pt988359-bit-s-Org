@@ -11,7 +11,6 @@ const AdminProductsView = lazy(() => import('./AdminProductsView').then(m => ({ 
 const AdminCategoriesView = lazy(() => import('./AdminCategoriesView').then(m => ({ default: m.AdminCategoriesView })));
 const AdminOrdersView = lazy(() => import('./AdminOrdersView').then(m => ({ default: m.AdminOrdersView })));
 const AdminPaymentsView = lazy(() => import('./AdminPaymentsView').then(m => ({ default: m.AdminPaymentsView })));
-const AdminInvoicesView = lazy(() => import('./AdminInvoicesView').then(m => ({ default: m.AdminInvoicesView })));
 const AdminCustomersView = lazy(() => import('./AdminCustomersView').then(m => ({ default: m.AdminCustomersView })));
 const AdminFinanceView = lazy(() => import('./AdminFinanceView').then(m => ({ default: m.AdminFinanceView })));
 const AdminAnalyticsView = lazy(() => import('./AdminAnalyticsView').then(m => ({ default: m.AdminAnalyticsView })));
@@ -239,8 +238,6 @@ export const AdminLayout: React.FC = () => {
       navigateTo('admin-products');
     } else if (actionId === 'add-category') {
       navigateTo('admin-categories');
-    } else if (actionId === 'create-invoice') {
-      navigateTo('admin-invoices');
     } else if (actionId === 'open-ai') {
       navigateTo('admin-ai');
     } else if (actionId === 'add-customer') {
@@ -287,8 +284,6 @@ export const AdminLayout: React.FC = () => {
         return <AdminOrdersView />;
       case 'admin-payments':
         return <AdminPaymentsView />;
-      case 'admin-invoices':
-        return <AdminInvoicesView />;
       case 'admin-customers':
         return <AdminCustomersView />;
       case 'admin-finance':
