@@ -220,6 +220,7 @@ export const CustomerActionWizardModal: React.FC<CustomerActionWizardModalProps>
       type: 'info',
       channel: 'in_app',
       recipientPhone: customerPhone,
+      metadata: { referenceNumber: ref, productId: product.id },
     });
 
     const doc = savePurchaseRequest({
@@ -314,6 +315,7 @@ export const CustomerActionWizardModal: React.FC<CustomerActionWizardModalProps>
       type: 'info',
       channel: 'in_app',
       recipientPhone: customerPhone,
+      metadata: { referenceNumber: ref, productId: product.id },
     });
 
     const doc = saveNegotiationRequest({
@@ -435,6 +437,7 @@ export const CustomerActionWizardModal: React.FC<CustomerActionWizardModalProps>
       type: 'info',
       channel: 'in_app',
       recipientPhone: customerPhone,
+      metadata: { referenceNumber: ref, productId: product.id },
     });
 
     submitTradeRequest({

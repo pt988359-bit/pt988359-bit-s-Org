@@ -1,4 +1,5 @@
 import { LoggerService } from './LoggerService';
+import { supabase } from '../../supabase/client';
 
 export type NotificationChannel = 'in_app' | 'whatsapp' | 'sms' | 'email';
 
@@ -50,6 +51,30 @@ export class NotificationService {
       case 'in_app':
       default:
         // Already recorded in memory / local store
+        try {
+          const derivedType =
+            payload.title.includes('طلب شراء') ? 'purchase' :
+            payload.title.includes('تفاوض') ? 'negotiation' :
+            payload.title.includes('استبدال') ? 'trade_in' : 'system_alert';
+          const derivedPriority =
+            derivedType === 'purchase' || derivedType === 'trade_in' ? 'high' :
+            derivedType === 'negotiation' ? 'medium' : 'medium';
+          void Promise.resolve(
+            supabase
+              .from('notifications')
+              .insert({
+                type: derivedType,
+                priority: derivedPriority,
+                title: payload.title,
+                message: payload.message,
+                reference_number: payload.metadata?.referenceNumber || null,
+                state: 'unread',
+                is_read: false,
+                data: payload.metadata || {},
+                created_at: new Date().toISOString(),
+              })
+          ).catch(() => {});
+        } catch { /* silent — never break the app flow */ }
         break;
     }
 
