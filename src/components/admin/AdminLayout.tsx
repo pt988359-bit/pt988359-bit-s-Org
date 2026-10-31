@@ -23,6 +23,7 @@ const AdminOperationsCenterView = lazy(() => import('./AdminOperationsCenterView
 // Core Foundation Components (Phase 9)
 import { AdminCommandPalette } from './core/AdminCommandPalette';
 import { AdminApprovalCenter } from './core/AdminApprovalCenter';
+import { AdminNotificationCenter } from './core/AdminNotificationCenter';
 import { AdminActivityTimelineModal } from './core/AdminActivityTimelineModal';
 import { AdminQuickActionCenter } from './core/AdminQuickActionCenter';
 import { AdminRecentWorkDrawer } from './core/AdminRecentWorkDrawer';
@@ -48,6 +49,8 @@ import {
   ServiceHealthStatus,
   ActiveSession,
   FailedLoginAttempt,
+  AdminNotification,
+  NotificationState,
 } from '../../types/adminCore';
 
 export const AdminLayout: React.FC = () => {
@@ -59,6 +62,7 @@ export const AdminLayout: React.FC = () => {
   // Core Foundation Modal States
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [approvalCenterOpen, setApprovalCenterOpen] = useState(false);
+  const [notificationCenterOpen, setNotificationCenterOpen] = useState(false);
   const [activityTimelineOpen, setActivityTimelineOpen] = useState(false);
   const [recentWorkOpen, setRecentWorkOpen] = useState(false);
   const [profileSecurityOpen, setProfileSecurityOpen] = useState(false);
@@ -66,12 +70,85 @@ export const AdminLayout: React.FC = () => {
 
   // Data States
   const [approvals, setApprovals] = useState<ApprovalItem[]>(INITIAL_APPROVALS);
+  const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLogEntry[]>(INITIAL_ACTIVITY_LOGS);
   const [recentWorkItems] = useState<RecentWorkItem[]>(INITIAL_RECENT_WORK);
   const [drafts, setDrafts] = useState<AdminDraft[]>(INITIAL_DRAFTS);
   const [services, setServices] = useState<ServiceHealthStatus[]>(INITIAL_SYSTEM_SERVICES);
   const [sessions, setSessions] = useState<ActiveSession[]>(INITIAL_ACTIVE_SESSIONS);
   const [failedLogins] = useState<FailedLoginAttempt[]>(INITIAL_FAILED_LOGINS);
+
+  // Silent browser Notification permission request on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+      try {
+        Notification.requestPermission().catch(() => {});
+      } catch {}
+    }
+  }, []);
+
+  // Notifications live polling every 25 seconds while admin panel is open
+  const previousNotificationIdsRef = React.useRef<Set<string>>(new Set());
+  const isInitialFetchRef = React.useRef(true);
+
+  const fetchLiveNotifications = React.useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/notifications');
+      if (!res.ok) return;
+      const data = await res.json();
+      const list: AdminNotification[] = Array.isArray(data) ? data : (data.notifications || []);
+
+      // If new unread notifications arrived after initial load, trigger browser notification
+      if (!isInitialFetchRef.current) {
+        const prevIds = previousNotificationIdsRef.current;
+        const freshUnread = list.filter((item) => !prevIds.has(item.id) && item.state === 'unread');
+        if (freshUnread.length > 0 && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+          freshUnread.slice(0, 3).forEach((item) => {
+            try {
+              new Notification(item.title, {
+                body: item.message,
+                icon: '/icons/icon-192x192.png',
+              });
+            } catch {}
+          });
+        }
+      }
+
+      previousNotificationIdsRef.current = new Set(list.map((item) => item.id));
+      isInitialFetchRef.current = false;
+      setNotifications(list);
+    } catch {
+      // Silent error fallback
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchLiveNotifications();
+    const interval = setInterval(fetchLiveNotifications, 25000);
+    return () => clearInterval(interval);
+  }, [fetchLiveNotifications]);
+
+  const handleMarkNotificationRead = async (id: string) => {
+    setNotifications((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, state: 'read' as NotificationState } : item))
+    );
+    try {
+      await fetch(`/api/admin/notifications/${encodeURIComponent(id)}/read`, { method: 'POST' });
+    } catch {}
+  };
+
+  const handleMarkAllNotificationsRead = async () => {
+    setNotifications((prev) =>
+      prev.map((item) => ({ ...item, state: 'read' as NotificationState }))
+    );
+    try {
+      await fetch('/api/admin/notifications/read-all', { method: 'POST' });
+    } catch {}
+  };
+
+  const handleUpdateNotifications = (updated: AdminNotification[]) => {
+    setNotifications(updated);
+  };
 
   // Diagnostic live window width tracker
   const [windowWidth, setWindowWidth] = useState(
@@ -235,6 +312,7 @@ export const AdminLayout: React.FC = () => {
   };
 
   const pendingApprovalCount = approvals.filter((a) => a.status === 'pending').length;
+  const unreadNotificationCount = notifications.filter((n) => n.state === 'unread').length;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex font-sans dir-rtl">
@@ -250,6 +328,8 @@ export const AdminLayout: React.FC = () => {
           onOpenSidebar={() => setSidebarOpen(true)}
           onOpenCommandPalette={() => setCommandPaletteOpen(true)}
           onOpenApprovalCenter={() => setApprovalCenterOpen(true)}
+          onOpenNotifications={() => setNotificationCenterOpen(true)}
+          unreadNotificationCount={unreadNotificationCount}
           onOpenActivityTimeline={() => setActivityTimelineOpen(true)}
           onOpenRecentWork={() => setRecentWorkOpen(true)}
           onOpenProfileSecurity={() => setProfileSecurityOpen(true)}
@@ -320,6 +400,15 @@ export const AdminLayout: React.FC = () => {
         onClose={() => setApprovalCenterOpen(false)}
         approvalItems={approvals}
         onUpdateApproval={handleUpdateApproval}
+      />
+
+      <AdminNotificationCenter
+        isOpen={notificationCenterOpen}
+        onClose={() => setNotificationCenterOpen(false)}
+        notifications={notifications}
+        onUpdateNotifications={handleUpdateNotifications}
+        onMarkRead={handleMarkNotificationRead}
+        onMarkAllRead={handleMarkAllNotificationsRead}
       />
 
       <AdminActivityTimelineModal

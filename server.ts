@@ -19,6 +19,12 @@ import { ADMIN_FIREBASE_UID, ADMIN_EMAIL } from './src/server/adminSessionConfig
 import { getSupabaseAdminClient, isSupabaseAdminConfigured } from './src/server/supabaseAdmin';
 import { mapItemToPostgresRow, mapPostgresRowToItem } from './src/core/storage/SupabaseStorageAdapter';
 import { APP_CONFIG } from './src/core/config/appConfig';
+import {
+  AdminNotification,
+  NotificationPriority,
+  NotificationState,
+  NotificationType,
+} from './src/types/adminCore';
 
 dotenv.config();
 
@@ -360,6 +366,112 @@ async function startServer() {
       success: true,
       message: 'تم تسجيل الخروج بنجاح',
     });
+  });
+
+  // =========================================================================
+  // ADMIN NOTIFICATIONS API (Wired to Supabase notifications table)
+  // Protected with requireAdminSession
+  // =========================================================================
+
+  // GET /api/admin/notifications: Read last 100 notifications in camelCase matching AdminNotification
+  app.get('/api/admin/notifications', requireAdminSession, async (req, res) => {
+    try {
+      const supabase = getSupabaseAdminClient();
+      if (!supabase) {
+        return res.json([]);
+      }
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (error || !Array.isArray(data)) {
+        if (error) {
+          console.warn('[AdminNotifications] Supabase fetch error:', error.message);
+        }
+        return res.json([]);
+      }
+
+      const notifications: AdminNotification[] = data.map((row: any) => ({
+        id: String(row.id),
+        type: (row.type as NotificationType) || 'system_alert',
+        title: row.title || '',
+        message: row.message || '',
+        referenceNumber: row.reference_number || undefined,
+        priority: (row.priority as NotificationPriority) || 'medium',
+        state: (row.state as NotificationState) || (row.is_read ? 'read' : 'unread'),
+        timestamp: row.created_at
+          ? new Date(row.created_at).toISOString().replace('T', ' ').substring(0, 16)
+          : new Date().toISOString().replace('T', ' ').substring(0, 16),
+        linkRoute: (row.data && typeof row.data === 'object' && row.data.linkRoute) ? row.data.linkRoute : undefined,
+        metadata: (row.data && typeof row.data === 'object') ? row.data : undefined,
+      }));
+
+      return res.json(notifications);
+    } catch (err: any) {
+      console.warn('[AdminNotifications] GET error:', err?.message || err);
+      return res.json([]);
+    }
+  });
+
+  // POST /api/admin/notifications/:id/read: Mark single notification as read
+  app.post('/api/admin/notifications/:id/read', requireAdminSession, async (req, res) => {
+    try {
+      const id = req.params.id;
+      const supabase = getSupabaseAdminClient();
+      if (!supabase) {
+        return res.json({ ok: false, error: 'Supabase client not configured' });
+      }
+
+      const { error } = await supabase
+        .from('notifications')
+        .update({
+          state: 'read',
+          is_read: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id);
+
+      if (error) {
+        console.warn('[AdminNotifications] mark-read error:', error.message);
+        return res.json({ ok: false, error: error.message });
+      }
+
+      return res.json({ ok: true, id });
+    } catch (err: any) {
+      console.warn('[AdminNotifications] mark-read exception:', err?.message || err);
+      return res.json({ ok: false, error: err?.message || 'Error updating notification' });
+    }
+  });
+
+  // POST /api/admin/notifications/read-all: Mark all unread notifications as read
+  app.post('/api/admin/notifications/read-all', requireAdminSession, async (req, res) => {
+    try {
+      const supabase = getSupabaseAdminClient();
+      if (!supabase) {
+        return res.json({ ok: false, error: 'Supabase client not configured' });
+      }
+
+      const { error } = await supabase
+        .from('notifications')
+        .update({
+          state: 'read',
+          is_read: true,
+          updated_at: new Date().toISOString(),
+        })
+        .or('is_read.eq.false,state.eq.unread');
+
+      if (error) {
+        console.warn('[AdminNotifications] read-all error:', error.message);
+        return res.json({ ok: false, error: error.message });
+      }
+
+      return res.json({ ok: true });
+    } catch (err: any) {
+      console.warn('[AdminNotifications] read-all exception:', err?.message || err);
+      return res.json({ ok: false, error: err?.message || 'Error updating notifications' });
+    }
   });
 
   // =========================================================================

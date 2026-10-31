@@ -32,6 +32,8 @@ interface AdminNotificationCenterProps {
   onClose: () => void;
   notifications: AdminNotification[];
   onUpdateNotifications: (updated: AdminNotification[]) => void;
+  onMarkRead?: (id: string) => void;
+  onMarkAllRead?: () => void;
 }
 
 export const AdminNotificationCenter: React.FC<AdminNotificationCenterProps> = ({
@@ -39,6 +41,8 @@ export const AdminNotificationCenter: React.FC<AdminNotificationCenterProps> = (
   onClose,
   notifications,
   onUpdateNotifications,
+  onMarkRead,
+  onMarkAllRead,
 }) => {
   const { navigateTo } = useShowroom();
   const [filterState, setFilterState] = useState<'all' | 'unread' | 'snoozed' | 'archived'>('all');
@@ -76,11 +80,23 @@ export const AdminNotificationCenter: React.FC<AdminNotificationCenterProps> = (
   const handleMarkAllRead = () => {
     const updated = notifications.map((n) => ({ ...n, state: 'read' as NotificationState }));
     onUpdateNotifications(updated);
+    if (onMarkAllRead) {
+      onMarkAllRead();
+    } else {
+      fetch('/api/admin/notifications/read-all', { method: 'POST' }).catch(() => {});
+    }
   };
 
   const handleItemStateChange = (id: string, newState: NotificationState) => {
     const updated = notifications.map((n) => (n.id === id ? { ...n, state: newState } : n));
     onUpdateNotifications(updated);
+    if (newState === 'read') {
+      if (onMarkRead) {
+        onMarkRead(id);
+      } else {
+        fetch(`/api/admin/notifications/${encodeURIComponent(id)}/read`, { method: 'POST' }).catch(() => {});
+      }
+    }
   };
 
   const handleNotificationClick = (item: AdminNotification) => {

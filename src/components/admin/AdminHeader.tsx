@@ -20,12 +20,15 @@ import {
   Sliders,
   Smartphone,
   Download,
+  Bell,
 } from 'lucide-react';
 
 interface AdminHeaderProps {
   onOpenSidebar: () => void;
   onOpenCommandPalette: () => void;
   onOpenApprovalCenter: () => void;
+  onOpenNotifications: () => void;
+  unreadNotificationCount: number;
   onOpenActivityTimeline: () => void;
   onOpenRecentWork: () => void;
   onOpenProfileSecurity: () => void;
@@ -39,6 +42,8 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   onOpenSidebar,
   onOpenCommandPalette,
   onOpenApprovalCenter,
+  onOpenNotifications,
+  unreadNotificationCount,
   onOpenActivityTimeline,
   onOpenRecentWork,
   onOpenProfileSecurity,
@@ -157,6 +162,22 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
           {pendingApprovalCount > 0 && (
             <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-slate-950 font-black text-[10px]">
               {pendingApprovalCount}
+            </span>
+          )}
+        </button>
+
+        {/* Notifications Center Bell Button */}
+        <button
+          onClick={onOpenNotifications}
+          className="p-2 sm:px-2.5 sm:py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition-all cursor-pointer border border-slate-700 relative flex items-center justify-center gap-1.5 min-w-[38px] min-h-[38px] sm:min-w-0"
+          title="مركز الإشعارات والتنبيهات الفورية"
+          aria-label="مركز الإشعارات والتنبيهات"
+        >
+          <Bell className="w-4 h-4 text-blue-400 shrink-0" />
+          <span className="hidden lg:inline text-[11px]">الإشعارات</span>
+          {unreadNotificationCount > 0 && (
+            <span className="px-1.5 py-0.2 rounded-full bg-blue-500 text-white font-black text-[10px]">
+              {unreadNotificationCount}
             </span>
           )}
         </button>
