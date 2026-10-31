@@ -5,7 +5,6 @@ import {
   X,
   Package,
   Layers,
-  FileSpreadsheet,
   Users,
   ShoppingBag,
   Search,
@@ -48,14 +47,6 @@ export const AdminQuickActionCenter: React.FC<AdminQuickActionCenterProps> = ({
       color: 'bg-emerald-600 hover:bg-emerald-500 text-white',
       route: 'admin-categories',
       actionId: 'add-category',
-    },
-    {
-      id: 'qa-3',
-      label: 'إصدار فاتورة ضريبية',
-      icon: <FileSpreadsheet className="w-4 h-4" />,
-      color: 'bg-purple-600 hover:bg-purple-500 text-white',
-      route: 'admin-invoices',
-      actionId: 'create-invoice',
     },
     {
       id: 'qa-4',

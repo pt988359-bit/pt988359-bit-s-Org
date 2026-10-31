@@ -52,6 +52,15 @@ import {
   NotificationState,
 } from '../../types/adminCore';
 
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const output = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) output[i] = rawData.charCodeAt(i);
+  return output;
+}
+
 export const AdminLayout: React.FC = () => {
   const { currentRoute, navigateTo } = useShowroom();
 
@@ -84,6 +93,24 @@ export const AdminLayout: React.FC = () => {
         Notification.requestPermission().catch(() => {});
       } catch {}
     }
+  }, []);
+
+  // Web Push subscription registration for background alerts
+  useEffect(() => {
+    (async () => {
+      try {
+        if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !('PushManager' in window)) return;
+        const r = await fetch('/api/admin/push/vapid-public'); if (!r.ok) return;
+        const { publicKey } = await r.json(); if (!publicKey) return;
+        const reg = await navigator.serviceWorker.getRegistration(); if (!reg) return;
+        let sub = await reg.pushManager.getSubscription();
+        if (!sub) {
+          sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) });
+        }
+        const raw = sub.toJSON();
+        await fetch('/api/admin/push/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: raw.endpoint, keys: raw.keys, userAgent: navigator.userAgent }) }).catch(() => {});
+      } catch { /* silent — never break the admin app */ }
+    })();
   }, []);
 
   // Notifications live polling every 25 seconds while admin panel is open

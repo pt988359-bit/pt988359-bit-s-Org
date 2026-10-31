@@ -28,6 +28,20 @@ import {
 
 dotenv.config();
 
+// Web Push VAPID configuration
+import webpush from 'web-push';
+const VAPID_PUBLIC = process.env.VAPID_PUBLIC_KEY;
+const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY;
+let isPushConfigured = !!(VAPID_PUBLIC && VAPID_PRIVATE);
+if (isPushConfigured) {
+  try {
+    webpush.setVapidDetails('mailto:pt988359@gmail.com', VAPID_PUBLIC!, VAPID_PRIVATE!);
+  } catch {
+    isPushConfigured = false;
+  }
+}
+let lastPushSentAt = new Date();
+
 // Sanitize process.env to remove any malformed environment variables
 for (const key of Object.keys(process.env)) {
   if (key.startsWith('VITE_') && !/^[A-Za-z0-9_]+$/.test(key)) {
@@ -471,6 +485,49 @@ async function startServer() {
     } catch (err: any) {
       console.warn('[AdminNotifications] read-all exception:', err?.message || err);
       return res.json({ ok: false, error: err?.message || 'Error updating notifications' });
+    }
+  });
+
+  // =========================================================================
+  // ADMIN WEB PUSH ENDPOINTS
+  // Protected with requireAdminSession
+  // =========================================================================
+
+  app.get('/api/admin/push/vapid-public', requireAdminSession, (req, res) => {
+    return res.json({ publicKey: isPushConfigured ? VAPID_PUBLIC : null });
+  });
+
+  app.post('/api/admin/push/subscribe', requireAdminSession, async (req, res) => {
+    try {
+      const { endpoint, keys, userAgent } = req.body || {};
+      if (!endpoint || !keys || !keys.p256dh || !keys.auth) {
+        return res.status(400).json({ ok: false, error: 'Missing required push subscription fields' });
+      }
+      const supabase = getSupabaseAdminClient();
+      if (!supabase) {
+        return res.json({ ok: false, error: 'Supabase client not configured' });
+      }
+      const { error } = await supabase
+        .from('push_subscriptions')
+        .upsert(
+          {
+            endpoint,
+            p256dh: keys.p256dh,
+            auth: keys.auth,
+            user_agent: userAgent || null,
+            last_seen_at: new Date().toISOString(),
+          },
+          { onConflict: 'endpoint' }
+        );
+
+      if (error) {
+        console.warn('[Push] upsert error:', error.message);
+        return res.json({ ok: false, error: error.message });
+      }
+      return res.json({ ok: true });
+    } catch (err: any) {
+      console.warn('[Push] subscribe exception:', err?.message || err);
+      return res.json({ ok: false });
     }
   });
 
@@ -1884,6 +1941,32 @@ async function startServer() {
   const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`PRO TECK Server running on http://localhost:${PORT}`);
   });
+
+  // Background Web Push Notification Dispatcher (every 25 seconds)
+  setInterval(async () => {
+    try {
+      if (!isPushConfigured) return;
+      const supabase = getSupabaseAdminClient(); if (!supabase) return;
+      const { data } = await supabase.from('notifications').select('created_at, title, message').order('created_at', { ascending: false }).limit(1);
+      const latest = data && data[0];
+      if (!latest || !latest.created_at) return;
+      const latestAt = new Date(latest.created_at);
+      if (latestAt <= lastPushSentAt) return;
+      lastPushSentAt = latestAt;
+      const { data: subs } = await supabase.from('push_subscriptions').select('endpoint, p256dh, auth');
+      if (!Array.isArray(subs) || subs.length === 0) return;
+      const payload = JSON.stringify({ title: latest.title, message: latest.message, url: '/admin' });
+      await Promise.allSettled(subs.map(async (s) => {
+        try {
+          await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload);
+        } catch (err: any) {
+          if (err && (err.statusCode === 404 || err.statusCode === 410)) {
+            await supabase.from('push_subscriptions').delete().eq('endpoint', s.endpoint);
+          }
+        }
+      }));
+    } catch { /* never crash the loop or the server */ }
+  }, 25000);
 
   server.on('error', (err: any) => {
     if (err.code === 'EADDRINUSE') {
