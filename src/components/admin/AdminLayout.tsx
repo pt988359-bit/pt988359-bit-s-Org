@@ -28,6 +28,7 @@ import { AdminQuickActionCenter } from './core/AdminQuickActionCenter';
 import { AdminRecentWorkDrawer } from './core/AdminRecentWorkDrawer';
 import { AdminProfileSecurityModal } from './core/AdminProfileSecurityModal';
 import { AdminSystemStatusModal } from './core/AdminSystemStatusModal';
+import { CloudSyncIndicator } from './CloudSyncIndicator';
 
 // Seed Storage Data
 import {
@@ -342,6 +343,9 @@ export const AdminLayout: React.FC = () => {
       <div className="fixed top-1 left-1 z-[9999] bg-black text-white text-[10px] px-1.5 py-0.5 rounded font-mono pointer-events-none shadow">
         {windowWidth}px
       </div>
+
+      {/* Cloud Sync Outbox Indicator (hidden when fully synced) */}
+      <CloudSyncIndicator />
 
       {/* Main Admin App Container */}
       <div className="flex-1 flex flex-col min-w-0 lg:mr-72">

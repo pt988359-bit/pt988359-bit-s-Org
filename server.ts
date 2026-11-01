@@ -547,7 +547,6 @@ async function startServer() {
     'sequence_counters',
     'categories',
     'products',
-    'invoices',
     'purchase_requests',
     'negotiations',
     'inquiries',

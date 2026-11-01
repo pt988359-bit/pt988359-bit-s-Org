@@ -5,6 +5,7 @@
 
 import { StorageAdapter } from './StorageAdapter';
 import { LocalStorageAdapter } from './LocalStorageAdapter';
+import { enqueueFailedWrite } from './CloudSyncOutbox';
 import { LoggerService } from '../services/LoggerService';
 import { AdminSessionService } from '../services/AdminSessionService';
 import {
@@ -287,10 +288,29 @@ export class FirestoreStorageAdapter implements StorageAdapter {
               await executeBatchWrite(batchOps);
             } catch (err: any) {
               LoggerService.warn('FirestoreStorageAdapter', `Batch write to ${collectionName} failed for chunk of ${chunk.length} items`, err);
-              if (this.isPermissionError(err) && AdminSessionService.hasToken()) {
-                LoggerService.info('FirestoreStorageAdapter', `Batch write permission error for ${collectionName}. Falling back to admin server POST endpoint for ${chunk.length} items.`);
+              if (this.isPermissionError(err)) {
+                if (AdminSessionService.hasToken()) {
+                  LoggerService.info('FirestoreStorageAdapter', `Batch write permission error for ${collectionName}. Falling back to admin server POST endpoint for ${chunk.length} items.`);
+                  for (const item of chunk) {
+                    const savedViaApi = await this.saveDocViaAdminApi(collectionName, (item as any).id, item);
+                    if (!savedViaApi && item && (item as any).id) {
+                      enqueueFailedWrite(collectionName, (item as any).id, item);
+                    }
+                  }
+                } else {
+                  // No admin session available — queue everything so nothing is silently local-only
+                  for (const item of chunk) {
+                    if (item && (item as any).id) {
+                      enqueueFailedWrite(collectionName, (item as any).id, item);
+                    }
+                  }
+                }
+              } else {
+                // Non-permission batch failure — queue the chunk for background retry
                 for (const item of chunk) {
-                  await this.saveDocViaAdminApi(collectionName, (item as any).id, item);
+                  if (item && (item as any).id) {
+                    enqueueFailedWrite(collectionName, (item as any).id, item);
+                  }
                 }
               }
             }
@@ -358,7 +378,10 @@ export class FirestoreStorageAdapter implements StorageAdapter {
           'FirestoreStorageAdapter',
           `Direct write permission error for ${collectionName}/${data.id}. Attempting admin server fallback.`
         );
-        await this.saveDocViaAdminApi(collectionName, data.id, data);
+        const savedViaApi = await this.saveDocViaAdminApi(collectionName, data.id, data);
+        if (!savedViaApi) {
+          enqueueFailedWrite(collectionName, data.id, data);
+        }
         return;
       }
       firestoreHealthManager.recordError(err, `writeDocSingle:${collectionName}/${data.id}`);
@@ -367,6 +390,12 @@ export class FirestoreStorageAdapter implements StorageAdapter {
         `Single doc write to ${collectionName}/${data.id} failed`,
         err
       );
+      // Last resort: try the admin server endpoint, otherwise queue the write so
+      // it is retried in the background instead of silently staying local-only.
+      const savedViaApi = await this.saveDocViaAdminApi(collectionName, data.id, data);
+      if (!savedViaApi) {
+        enqueueFailedWrite(collectionName, data.id, data);
+      }
     }
   }
 
