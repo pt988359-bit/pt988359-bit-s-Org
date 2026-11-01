@@ -1947,24 +1947,36 @@ async function startServer() {
     try {
       if (!isPushConfigured) return;
       const supabase = getSupabaseAdminClient(); if (!supabase) return;
-      const { data } = await supabase.from('notifications').select('created_at, title, message').order('created_at', { ascending: false }).limit(1);
-      const latest = data && data[0];
-      if (!latest || !latest.created_at) return;
-      const latestAt = new Date(latest.created_at);
-      if (latestAt <= lastPushSentAt) return;
-      lastPushSentAt = latestAt;
+      const nowIso = new Date().toISOString();
+      const { data: pending } = await supabase
+        .from('notifications')
+        .select('created_at, title, message')
+        .gt('created_at', lastPushSentAt.toISOString())
+        .lte('created_at', nowIso)
+        .order('created_at', { ascending: true })
+        .limit(20);
+      if (!Array.isArray(pending) || pending.length === 0) return;
+      lastPushSentAt = new Date(pending[pending.length - 1].created_at);
       const { data: subs } = await supabase.from('push_subscriptions').select('endpoint, p256dh, auth');
       if (!Array.isArray(subs) || subs.length === 0) return;
-      const payload = JSON.stringify({ title: latest.title, message: latest.message, url: '/admin' });
-      await Promise.allSettled(subs.map(async (s) => {
-        try {
-          await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload);
-        } catch (err: any) {
-          if (err && (err.statusCode === 404 || err.statusCode === 410)) {
-            await supabase.from('push_subscriptions').delete().eq('endpoint', s.endpoint);
-          }
+      const tasks: Promise<void>[] = [];
+      for (const n of pending) {
+        for (const s of subs) {
+          tasks.push((async () => {
+            try {
+              await webpush.sendNotification(
+                { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
+                JSON.stringify({ title: n.title, message: n.message, url: '/admin' })
+              );
+            } catch (err: any) {
+              if (err && (err.statusCode === 404 || err.statusCode === 410)) {
+                await supabase.from('push_subscriptions').delete().eq('endpoint', s.endpoint);
+              }
+            }
+          })());
         }
-      }));
+      }
+      await Promise.allSettled(tasks);
     } catch { /* never crash the loop or the server */ }
   }, 25000);
 
