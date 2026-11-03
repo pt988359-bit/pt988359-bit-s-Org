@@ -36,6 +36,7 @@ export const AiAssistantChatModal: React.FC<AiAssistantChatModalProps> = ({ isOp
   ]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [slowHintVisible, setSlowHintVisible] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -43,6 +44,16 @@ export const AiAssistantChatModal: React.FC<AiAssistantChatModalProps> = ({ isOp
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, isTyping]);
+
+  // After 15s of waiting, reassure the user that generation can take up to a minute
+  useEffect(() => {
+    if (!isTyping) {
+      setSlowHintVisible(false);
+      return;
+    }
+    const t = setTimeout(() => setSlowHintVisible(true), 15000);
+    return () => clearTimeout(t);
+  }, [isTyping]);
 
   if (!isOpen) return null;
 
@@ -138,10 +149,17 @@ export const AiAssistantChatModal: React.FC<AiAssistantChatModalProps> = ({ isOp
           ))}
           {isTyping && (
             <div className="flex justify-end">
-              <div className="bg-slate-800 border border-slate-700 px-4 py-3 rounded-2xl rounded-bl-md flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '300ms' }}></span>
+              <div className="bg-slate-800 border border-slate-700 px-4 py-3 rounded-2xl rounded-bl-md">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                </div>
+                {slowHintVisible && (
+                  <p className="mt-2 text-[10px] text-slate-400">
+                    ما زلت أُعد ردك… قد يستغرق التوليد حتى دقيقة تقريبًا، لا تغلق النافذة.
+                  </p>
+                )}
               </div>
             </div>
           )}

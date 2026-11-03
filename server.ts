@@ -197,6 +197,54 @@ async function startServer() {
     return new GoogleGenAI({ apiKey });
   };
 
+  // --- AI model fallback: timeout per attempt + winner cache (fixes 40-65s latency) ---
+  const AI_CANDIDATE_MODELS = ['gemini-flash-latest', 'gemini-3.8-flash', 'gemini-3.1-flash-lite'];
+  const AI_ATTEMPT_TIMEOUT_MS = 20000;
+  let cachedWorkingAiModel: string | null = null;
+
+  const generateAiText = async (
+    prompt: string,
+    systemInstruction: string,
+    extraConfig: Record<string, unknown> = {}
+  ): Promise<string> => {
+    const ai = getAiClient();
+    const orderedModels = cachedWorkingAiModel
+      ? [cachedWorkingAiModel, ...AI_CANDIDATE_MODELS.filter((m) => m !== cachedWorkingAiModel)]
+      : AI_CANDIDATE_MODELS;
+
+    let lastError: any = null;
+    for (const modelName of orderedModels) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), AI_ATTEMPT_TIMEOUT_MS);
+      try {
+        const response: any = await ai.models.generateContent({
+          model: modelName,
+          contents: prompt,
+          config: {
+            systemInstruction,
+            abortSignal: controller.signal,
+            ...extraConfig,
+          } as any,
+        });
+        const text: string = response?.text || '';
+        if (text) {
+          cachedWorkingAiModel = modelName;
+          return text;
+        }
+        lastError = new Error(`النموذج ${modelName} أعاد ردًا فارغًا`);
+      } catch (mErr: any) {
+        if (mErr?.name === 'AbortError' || mErr?.name === 'AbortSignalTimeOutError') {
+          mErr.message = `انتهت مهلة 20 ثانية أثناء الاتصال بالمساعد الذكي`;
+        }
+        lastError = mErr;
+        console.warn(`[AIChat] Model ${modelName} failed, attempting next candidate:`, mErr?.message || mErr);
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+    throw lastError || new Error('فشل في استجابة المساعد الذكي');
+  };
+
   // API Health Endpoint
   app.get('/api/health', (req, res) => {
     res.json({
@@ -1820,35 +1868,12 @@ async function startServer() {
         return res.status(400).json({ error: 'Prompt is required' });
       }
 
-      const ai = getAiClient();
-      const candidateModels = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
-      let response: any = null;
-      let lastError: any = null;
+      const reply = await generateAiText(
+        prompt,
+        'أنت المساعد الذكي لمعرض PRO TECK للأجهزة المنزلية في المعادي شارع 68 القاهرة. أجب باحترافية ولطافة باللغة العربية ورشح الأجهزة المناسبة للعميل.'
+      );
 
-      for (const modelName of candidateModels) {
-        try {
-          response = await ai.models.generateContent({
-            model: modelName,
-            contents: prompt,
-            config: {
-              systemInstruction:
-                'أنت المساعد الذكي لمعرض PRO TECK للأجهزة المنزلية في المعادي شارع 68 القاهرة. أجب باحترافية ولطافة باللغة العربية ورشح الأجهزة المناسبة للعميل.',
-            },
-          });
-          if (response && response.text) {
-            break;
-          }
-        } catch (mErr: any) {
-          lastError = mErr;
-          console.warn(`[AIChat] Model ${modelName} failed, attempting next candidate:`, mErr?.message || mErr);
-        }
-      }
-
-      if (!response || !response.text) {
-        throw lastError || new Error('فشل في استجابة المساعد الذكي');
-      }
-
-      res.json({ reply: response.text });
+      res.json({ reply });
     } catch (error: any) {
       console.error('AI API Error:', error);
       let clientMsg = error?.message || 'Failed to generate AI response';
@@ -1870,35 +1895,13 @@ async function startServer() {
         return res.status(400).json({ error: 'يرجى تقديم نص الاستخراج (prompt مطلوب)' });
       }
 
-      const ai = getAiClient();
-      const candidateModels = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
-      let response: any = null;
-      let lastError: any = null;
+      const rawText = await generateAiText(
+        prompt,
+        systemInstruction || 'قم بتحليل بيانات الجهاز واستخراجها بكائن JSON محدد.',
+        { responseMimeType: 'application/json' }
+      );
 
-      for (const modelName of candidateModels) {
-        try {
-          response = await ai.models.generateContent({
-            model: modelName,
-            contents: prompt,
-            config: {
-              systemInstruction: systemInstruction || 'قم بتحليل بيانات الجهاز واستخراجها بكائن JSON محدد.',
-              responseMimeType: 'application/json',
-            },
-          });
-          if (response && response.text) {
-            break;
-          }
-        } catch (mErr: any) {
-          lastError = mErr;
-          console.warn(`[AIExtract] Model ${modelName} failed, attempting next candidate:`, mErr?.message || mErr);
-        }
-      }
-
-      if (!response || !response.text) {
-        throw lastError || new Error('تعذر استجابة نماذج الذكاء الاصطناعي');
-      }
-
-      const responseText = response.text?.trim() || '{}';
+      const responseText = rawText?.trim() || '{}';
       let parsed = {};
       try {
         parsed = JSON.parse(responseText);
