@@ -29,6 +29,7 @@ import { AdminRecentWorkDrawer } from './core/AdminRecentWorkDrawer';
 import { AdminProfileSecurityModal } from './core/AdminProfileSecurityModal';
 import { AdminSystemStatusModal } from './core/AdminSystemStatusModal';
 import { CloudSyncIndicator } from './CloudSyncIndicator';
+import { AiAssistantChatModal } from './AiAssistantChatModal';
 
 // Seed Storage Data
 import {
@@ -70,6 +71,7 @@ export const AdminLayout: React.FC = () => {
 
   // Core Foundation Modal States
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [aiChatOpen, setAiChatOpen] = useState(false);
   const [approvalCenterOpen, setApprovalCenterOpen] = useState(false);
   const [notificationCenterOpen, setNotificationCenterOpen] = useState(false);
   const [activityTimelineOpen, setActivityTimelineOpen] = useState(false);
@@ -267,7 +269,7 @@ export const AdminLayout: React.FC = () => {
     } else if (actionId === 'add-category') {
       navigateTo('admin-categories');
     } else if (actionId === 'open-ai') {
-      navigateTo('admin-ai');
+      setAiChatOpen(true);
     } else if (actionId === 'add-customer') {
       navigateTo('admin-customers');
     }
@@ -415,6 +417,7 @@ export const AdminLayout: React.FC = () => {
       <AdminQuickActionCenter onSelectAction={handleSelectQuickAction} />
 
       {/* PHASE 9 ADMIN CORE MODALS & OVERLAYS */}
+      <AiAssistantChatModal isOpen={aiChatOpen} onClose={() => setAiChatOpen(false)} />
       <AdminCommandPalette
         isOpen={commandPaletteOpen}
         onClose={() => setCommandPaletteOpen(false)}

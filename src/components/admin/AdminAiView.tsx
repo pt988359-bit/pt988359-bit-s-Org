@@ -4,6 +4,7 @@ import { useToast } from '../../context/ToastContext';
 import { Card, CardHeader, CardBody } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Textarea } from '../ui/Input';
+import { AiAssistantChatModal } from './AiAssistantChatModal';
 import {
   Bot,
   ShieldCheck,
@@ -26,6 +27,7 @@ export const AdminAiView: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'operations' | 'knowledge' | 'governance'>('operations');
   const [knowledgeModalOpen, setKnowledgeModalOpen] = useState(false);
+  const [assistantChatOpen, setAssistantChatOpen] = useState(false);
   const [prompt, setPrompt] = useState(aiConfig.systemPrompt);
   const [pendingActions, setPendingActions] = useState(AiGovernanceEngine.getPendingActions());
 
@@ -69,6 +71,14 @@ export const AdminAiView: React.FC = () => {
           >
             <Brain className="w-4 h-4 text-purple-400" />
             <span>محرك المعرفة والقواعد (AI Knowledge Engine - TASK-013)</span>
+          </button>
+
+          <button
+            onClick={() => setAssistantChatOpen(true)}
+            className="px-4 py-2.5 rounded-2xl bg-indigo-600/20 text-indigo-300 hover:bg-indigo-600/30 border border-indigo-500/40 font-bold flex items-center gap-2 transition-all cursor-pointer"
+          >
+            <Bot className="w-4 h-4" />
+            <span>محادثة المساعد الذكي (Gemini)</span>
           </button>
 
           <button
@@ -196,6 +206,9 @@ export const AdminAiView: React.FC = () => {
       {knowledgeModalOpen && (
         <AiEngineControlPanelModal onClose={() => setKnowledgeModalOpen(false)} />
       )}
+
+      {/* REAL GEMINI ASSISTANT CHAT */}
+      <AiAssistantChatModal isOpen={assistantChatOpen} onClose={() => setAssistantChatOpen(false)} />
     </div>
   );
 };
